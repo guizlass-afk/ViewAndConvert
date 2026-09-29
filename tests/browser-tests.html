@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Testes View & Convert</title></head>
+<body>
+  <h1 id="status">EXECUTANDO</h1><pre id="details"></pre>
+  <iframe id="app" src="../index.html" style="position:absolute;width:1200px;height:800px;opacity:0;pointer-events:none"></iframe>
+  <script>
+    const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+    document.getElementById('app').addEventListener('load',async()=>{
+      const log=[];
+      try{
+        const frame=document.getElementById('app'),win=frame.contentWindow,doc=frame.contentDocument;
+        for(let i=0;i<100&&!win.ViewConvertCore;i++)await wait(50);
+        const core=win.ViewConvertCore;if(!core)throw new Error('API ViewConvertCore não carregada');
+        const required=['stl','obj','3mf','glb','gltf','step','stp','iges','igs','brep','x_t','x_b','3dxml'];
+        if(!required.every(format=>core.supportedFormats.includes(format)))throw new Error('Lista de formatos incompleta');
+        if(core.extensionOf('modelo.X_T')!=='x_t'||core.extensionOf('modelo.step')!=='step')throw new Error('Detecção de extensão inválida');
+        if(!doc.querySelector('.brand-name').textContent.includes('View')||!doc.getElementById('emptyState'))throw new Error('Interface inicial inválida');
+        log.push('Interface inicial: OK','Formatos declarados: OK');
+        const stl=`solid tetra\nfacet normal 0 0 -1\nouter loop\nvertex 0 0 0\nvertex 0 10 0\nvertex 10 0 0\nendloop\nendfacet\nfacet normal 0 -1 0\nouter loop\nvertex 0 0 0\nvertex 10 0 0\nvertex 0 0 10\nendloop\nendfacet\nfacet normal -1 0 0\nouter loop\nvertex 0 0 0\nvertex 0 0 10\nvertex 0 10 0\nendloop\nendfacet\nfacet normal 1 1 1\nouter loop\nvertex 10 0 0\nvertex 0 10 0\nvertex 0 0 10\nendloop\nendfacet\nendsolid tetra`;
+        await core.loadFile(new win.File([stl],'tetra.stl',{type:'model/stl'}));
+        for(let i=0;i<80&&doc.getElementById('modelPanel').hidden;i++)await wait(50);
+        if(doc.getElementById('modelPanel').hidden||doc.getElementById('fileFormat').textContent!=='STL')throw new Error('STL não foi carregado');
+        if(doc.getElementById('triangleCount').textContent!=='4'||!doc.getElementById('dimensions').textContent.includes('10,00'))throw new Error('Geometria ou dimensões do STL inválidas');
+        doc.querySelector('[data-mode="edges"]').click();if(!doc.querySelector('[data-mode="edges"]').classList.contains('active'))throw new Error('Modo de arestas não ativado');
+        const section=doc.getElementById('sectionEnabled');section.checked=true;section.dispatchEvent(new win.Event('change'));if(doc.getElementById('sectionSlider').disabled)throw new Error('Corte de seção não ativado');
+        if(doc.getElementById('modelTree').querySelectorAll('.tree-node').length!==1)throw new Error('Árvore de modelo inválida');
+        log.push('Importação STL: OK','Dimensões e propriedades: OK','Modos de visualização: OK','Corte de seção: OK','Árvore de componentes: OK');
+        const stepResponse=await fetch('https://raw.githubusercontent.com/kovacsv/occt-import-js/main/test/testfiles/simple-basic-cube/cube.stp');
+        if(!stepResponse.ok)throw new Error('Fixture STEP indisponível');
+        await core.loadFile(new win.File([await stepResponse.arrayBuffer()],'cube.step',{type:'application/step'}));
+        if(doc.getElementById('fileFormat').textContent!=='STEP'||Number(doc.getElementById('triangleCount').textContent.replace(/\D/g,''))<12)throw new Error('Importação STEP via OpenCascade falhou');
+        log.push('Importação STEP em Web Worker: OK');
+        const downloads=[],originalClick=win.HTMLAnchorElement.prototype.click;win.HTMLAnchorElement.prototype.click=function(){downloads.push(this.download);};
+        for(const format of ['stl','obj','glb']){doc.getElementById('exportFormat').value=format;doc.getElementById('exportButton').click();for(let i=0;i<100&&!downloads.some(name=>name.endsWith(`.${format}`));i++)await wait(30);if(!downloads.some(name=>name.endsWith(`.${format}`)))throw new Error(`Exportação ${format.toUpperCase()} falhou`);}
+        win.HTMLAnchorElement.prototype.click=originalClick;log.push('Conversões STL, OBJ e GLB: OK');
+        document.getElementById('status').textContent='PASS';
+      }catch(error){document.getElementById('status').textContent='FAIL';log.push(error.stack||error.message);}
+      document.getElementById('details').textContent=log.join('\n');
+    });
+  </script>
+</body>
+</html>

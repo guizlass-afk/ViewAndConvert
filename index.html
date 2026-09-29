@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
+  <title>View & Convert — Visualizador 3D</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="View and Convert">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="brand-name"><strong>View</strong><em>&amp;</em><b>Convert</b></span>
+    </a>
+    <div class="topbar-copy"><strong>Visualizador e conversor 3D</strong><span>Ferramentas para projetos mecânicos</span></div>
+    <div class="privacy"><i></i><span>Processamento local e seguro</span></div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar left-sidebar">
+      <section class="panel import-panel">
+        <div class="section-heading"><span>1</span><div><h2>Abrir modelo</h2><p>Arraste ou selecione um arquivo 3D</p></div></div>
+        <label id="dropZone" class="drop-zone">
+          <input id="fileInput" type="file" accept=".stl,.obj,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
+          <span class="upload-icon">⇧</span>
+          <strong>Adicionar arquivo 3D</strong>
+          <small>ou arraste-o para a área de visualização</small>
+        </label>
+        <div class="format-row"><span>STL</span><span>OBJ</span><span>3MF</span><span>GLB</span><span>STEP</span><span>IGES</span></div>
+        <button id="openAnother" class="secondary full" type="button" hidden>Abrir outro arquivo</button>
+      </section>
+
+      <section id="modelPanel" class="panel" hidden>
+        <div class="section-heading"><span>2</span><div><h2>Informações do modelo</h2><p id="fileName">—</p></div></div>
+        <dl class="model-stats">
+          <div><dt>Formato</dt><dd id="fileFormat">—</dd></div>
+          <div><dt>Tamanho</dt><dd id="fileSize">—</dd></div>
+          <div><dt>Componentes</dt><dd id="meshCount">—</dd></div>
+          <div><dt>Triângulos</dt><dd id="triangleCount">—</dd></div>
+        </dl>
+        <div class="dimensions"><small>Dimensões gerais</small><strong id="dimensions">—</strong><span id="dimensionsUnit">milímetros</span></div>
+        <div class="field-row">
+          <label class="field"><span>Unidade do arquivo</span><select id="modelUnit"><option value="1">mm</option><option value="10">cm</option><option value="25.4">pol</option><option value="1000">m</option></select></label>
+          <label class="field"><span>Exibir medidas em</span><select id="displayUnit"><option value="mm">mm</option><option value="cm">cm</option><option value="in">pol</option><option value="m">m</option></select></label>
+        </div>
+      </section>
+
+      <section id="measurePanel" class="panel" hidden>
+        <div class="section-heading"><span>3</span><div><h2>Medições</h2><p>Selecione dois pontos sobre o modelo</p></div></div>
+        <button id="measureButton" class="tool-button" type="button"><span>⌁</span><div><strong>Medir distância</strong><small>Clique em dois pontos</small></div></button>
+        <div id="measureHint" class="tool-hint" hidden>Selecione o primeiro ponto</div>
+        <div id="measurements" class="measurement-list"><p>Nenhuma medição criada.</p></div>
+        <button id="clearMeasurements" class="text-button" type="button" disabled>Limpar medições</button>
+      </section>
+
+      <section id="sectionPanel" class="panel" hidden>
+        <div class="section-heading"><span>4</span><div><h2>Corte de seção</h2><p>Inspecione o interior do modelo</p></div></div>
+        <label class="switch-row"><input id="sectionEnabled" type="checkbox"><span><strong>Ativar plano de corte</strong><small>O modelo não é alterado</small></span></label>
+        <div class="axis-buttons" role="group" aria-label="Eixo do plano de corte"><button class="active" data-axis="x">X</button><button data-axis="y">Y</button><button data-axis="z">Z</button></div>
+        <label class="range-field"><span><b>Posição</b><output id="sectionValue">50%</output></span><input id="sectionSlider" type="range" min="0" max="100" value="50" disabled></label>
+        <label class="switch-row compact"><input id="sectionReverse" type="checkbox" disabled><span><strong>Inverter sentido</strong></span></label>
+      </section>
+
+      <section id="convertPanel" class="panel convert-panel" hidden>
+        <div class="section-heading"><span>5</span><div><h2>Converter modelo</h2><p>Exporte a geometria visualizada</p></div></div>
+        <label class="field full"><span>Formato de saída</span><select id="exportFormat"><option value="stl">STL binário</option><option value="obj">OBJ</option><option value="glb">GLB</option></select></label>
+        <button id="exportButton" class="primary" type="button"><span>Converter e baixar</span><b>→</b></button>
+        <p class="conversion-note">STEP e IGES são tessellados ao exportar para formatos de malha. A geometria original não é modificada.</p>
+      </section>
+    </aside>
+
+    <section class="viewer-area">
+      <div class="viewer-toolbar">
+        <div class="tool-group">
+          <button id="fitView" title="Enquadrar modelo" disabled>⌗<span>Enquadrar</span></button>
+          <button id="resetView" title="Vista isométrica" disabled>◇<span>Isométrica</span></button>
+        </div>
+        <div class="tool-group view-directions">
+          <button data-view="front" title="Vista frontal" disabled>F</button>
+          <button data-view="top" title="Vista superior" disabled>S</button>
+          <button data-view="right" title="Vista lateral direita" disabled>D</button>
+        </div>
+        <div class="tool-group display-modes">
+          <button class="active" data-mode="shaded" title="Sombreado" disabled>●</button>
+          <button data-mode="edges" title="Sombreado com arestas" disabled>▧</button>
+          <button data-mode="wireframe" title="Estrutura de arame" disabled>◇</button>
+          <button data-mode="transparent" title="Transparente" disabled>◉</button>
+        </div>
+        <div class="viewer-help"><span>Arraste para girar</span><i></i><span>Role para ampliar</span></div>
+      </div>
+
+      <div id="viewport" class="viewport">
+        <canvas id="canvas"></canvas>
+        <label id="emptyState" class="empty-state">
+          <input id="centerFileInput" type="file" accept=".stl,.obj,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
+          <span class="empty-graphic" aria-hidden="true"><i></i><i></i><i></i></span>
+          <strong>Visualize seu modelo 3D aqui</strong>
+          <p>Arraste um arquivo para esta área ou clique para selecionar.</p>
+          <b>Selecionar arquivo</b>
+          <small>STL · OBJ · 3MF · GLB · STEP · IGES · BREP</small>
+        </label>
+        <div id="loading" class="loading" hidden>
+          <span class="spinner"></span><strong id="loadingTitle">Lendo o modelo…</strong><p id="loadingDetail">Preparando a geometria para visualização</p>
+          <div class="progress"><i id="progressBar"></i></div><small id="progressValue">0%</small>
+        </div>
+        <div id="toast" class="toast" hidden></div>
+        <div class="axis-cube" aria-hidden="true"><b>Z</b><span><i>Y</i><em>X</em></span></div>
+        <div id="modelBadge" class="model-badge" hidden><i></i><span id="badgeName">—</span></div>
+      </div>
+
+      <div class="viewer-footer"><span id="statusText">Nenhum modelo carregado</span><span id="cursorPosition">X 0,00 · Y 0,00 · Z 0,00</span><span id="renderInfo">0 objetos · 0 triângulos</span></div>
+    </section>
+
+    <aside class="sidebar right-sidebar">
+      <section class="panel tree-panel">
+        <div class="panel-title"><div><h2>Estrutura do modelo</h2><p>Componentes e corpos</p></div><button id="toggleAll" type="button" disabled title="Exibir ou ocultar todos">◉</button></div>
+        <div id="modelTree" class="model-tree"><div class="tree-empty"><span>☷</span><p>A estrutura aparecerá depois que um modelo for aberto.</p></div></div>
+      </section>
+      <section class="panel properties-panel">
+        <div class="panel-title"><div><h2>Propriedades</h2><p>Resumo geométrico aproximado</p></div></div>
+        <dl class="property-list">
+          <div><dt>Área superficial</dt><dd id="surfaceArea">—</dd></div>
+          <div><dt>Volume fechado</dt><dd id="volume">—</dd></div>
+          <div><dt>Vértices</dt><dd id="vertexCount">—</dd></div>
+          <div><dt>Caixa envolvente</dt><dd id="bounds">—</dd></div>
+        </dl>
+        <p class="property-help">Área e volume são calculados sobre a malha visualizada. O volume só é confiável em modelos fechados.</p>
+      </section>
+      <section class="panel format-panel">
+        <div class="panel-title"><div><h2>Compatibilidade</h2><p>Formatos desta versão</p></div></div>
+        <ul class="support-list">
+          <li><i class="ready"></i><span><strong>STL · OBJ · 3MF · GLB</strong><small>Visualizar, medir, seccionar e converter</small></span></li>
+          <li><i class="ready"></i><span><strong>STEP · IGES · BREP</strong><small>Importação CAD via OpenCascade</small></span></li>
+          <li><i class="planned"></i><span><strong>X_T · X_B · 3DXML</strong><small>Requer conector CAD profissional</small></span></li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+
+  <div id="professionalModal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button id="closeModal" class="modal-close" type="button" aria-label="Fechar">×</button>
+      <span class="modal-icon">◇</span><h2 id="modalTitle">Formato CAD proprietário</h2>
+      <p id="modalText">Este formato exige um tradutor comercial licenciado para garantir fidelidade geométrica.</p>
+      <div class="modal-formats">X_T <span>·</span> X_B <span>·</span> 3DXML</div>
+      <button id="modalOk" class="primary" type="button"><span>Entendi</span></button>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
