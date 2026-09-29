@@ -22,6 +22,9 @@
         for(let i=0;i<80&&doc.getElementById('modelPanel').hidden;i++)await wait(50);
         if(doc.getElementById('modelPanel').hidden||doc.getElementById('fileFormat').textContent!=='STL')throw new Error('STL não foi carregado');
         if(doc.getElementById('triangleCount').textContent!=='4'||!doc.getElementById('dimensions').textContent.includes('10,00'))throw new Error('Geometria ou dimensões do STL inválidas');
+        const emptyState=doc.getElementById('emptyState');
+        if(!emptyState.hidden||win.getComputedStyle(emptyState).display!=='none'||emptyState.getClientRects().length)throw new Error('A tela inicial continua bloqueando o modelo carregado');
+        log.push('Tela inicial removida da area 3D: OK');
         doc.querySelector('[data-mode="edges"]').click();if(!doc.querySelector('[data-mode="edges"]').classList.contains('active'))throw new Error('Modo de arestas não ativado');
         const section=doc.getElementById('sectionEnabled');section.checked=true;section.dispatchEvent(new win.Event('change'));if(doc.getElementById('sectionSlider').disabled)throw new Error('Corte de seção não ativado');
         if(doc.getElementById('modelTree').querySelectorAll('.tree-node').length!==1)throw new Error('Árvore de modelo inválida');
