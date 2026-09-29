@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
   <title>View & Convert — Visualizador 3D</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -25,7 +25,7 @@
       <section class="panel import-panel">
         <div class="section-heading"><span>1</span><div><h2>Abrir modelo</h2><p>Arraste ou selecione um arquivo 3D</p></div></div>
         <label id="dropZone" class="drop-zone">
-          <input id="fileInput" type="file" accept=".stl,.obj,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
+          <input id="fileInput" type="file" accept=".stl,.obj,.ply,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
           <span class="upload-icon">⇧</span>
           <strong>Adicionar arquivo 3D</strong>
           <small>ou arraste-o para a área de visualização</small>
@@ -68,10 +68,12 @@
       </section>
 
       <section id="convertPanel" class="panel convert-panel" hidden>
-        <div class="section-heading"><span>5</span><div><h2>Converter modelo</h2><p>Exporte a geometria visualizada</p></div></div>
-        <label class="field full"><span>Formato de saída</span><select id="exportFormat"><option value="stl">STL binário</option><option value="obj">OBJ</option><option value="glb">GLB</option></select></label>
+        <div class="section-heading"><span>5</span><div><h2>Converter modelo</h2><p>Converta para formatos CAD e de malha</p></div></div>
+        <label class="field full"><span>Formato de saída</span><select id="exportFormat"><option value="stl">STL binário</option><option value="obj">OBJ</option><option value="glb">GLB</option><option value="gltf">glTF</option><option value="ply">PLY</option><option value="3mf">3MF</option><option value="step">STEP</option><option value="iges">IGES</option><option value="brep">BREP</option></select></label>
         <button id="exportButton" class="primary" type="button"><span>Converter e baixar</span><b>→</b></button>
-        <p class="conversion-note">STEP e IGES são tessellados ao exportar para formatos de malha. A geometria original não é modificada.</p>
+        <button id="cancelExport" class="secondary full" type="button" hidden>Cancelar conversão</button>
+        <p id="exportStatus" class="export-status" role="status" aria-live="polite"></p>
+        <p id="conversionNote" class="conversion-note"></p>
       </section>
     </aside>
 
@@ -99,7 +101,7 @@
       <div id="viewport" class="viewport">
         <canvas id="canvas"></canvas>
         <label id="emptyState" class="empty-state">
-          <input id="centerFileInput" type="file" accept=".stl,.obj,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
+          <input id="centerFileInput" type="file" accept=".stl,.obj,.ply,.3mf,.glb,.gltf,.step,.stp,.iges,.igs,.brep,.x_t,.x_b,.3dxml" hidden>
           <span class="empty-graphic" aria-hidden="true"><i></i><i></i><i></i></span>
           <strong>Visualize seu modelo 3D aqui</strong>
           <p>Arraste um arquivo para esta área ou clique para selecionar.</p>
@@ -137,8 +139,8 @@
       <section class="panel format-panel">
         <div class="panel-title"><div><h2>Compatibilidade</h2><p>Formatos desta versão</p></div></div>
         <ul class="support-list">
-          <li><i class="ready"></i><span><strong>STL · OBJ · 3MF · GLB</strong><small>Visualizar, medir, seccionar e converter</small></span></li>
-          <li><i class="ready"></i><span><strong>STEP · IGES · BREP</strong><small>Importação CAD via OpenCascade</small></span></li>
+          <li><i class="ready"></i><span><strong>STL · OBJ · PLY · 3MF · GLB/glTF</strong><small>Visualizar, medir, seccionar e converter</small></span></li>
+          <li><i class="ready"></i><span><strong>STEP · IGES · BREP</strong><small>Importação e exportação CAD</small></span></li>
           <li><i class="planned"></i><span><strong>X_T · X_B · 3DXML</strong><small>Requer conector CAD profissional</small></span></li>
         </ul>
       </section>
@@ -155,6 +157,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>

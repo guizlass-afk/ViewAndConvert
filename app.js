@@ -1,12 +1,11 @@
+import {convertModel,cadOutputFormats} from './model-export.js?v=1';
+import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {STLLoader} from 'three/addons/loaders/STLLoader.js';
 import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {ThreeMFLoader} from 'three/addons/loaders/3MFLoader.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {STLExporter} from 'three/addons/exporters/STLExporter.js';
-import {OBJExporter} from 'three/addons/exporters/OBJExporter.js';
-import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 
 const $=id=>document.getElementById(id);
 const ui={
@@ -18,7 +17,7 @@ const ui={
   surfaceArea:$('surfaceArea'),volume:$('volume'),vertexCount:$('vertexCount'),bounds:$('bounds'),professionalModal:$('professionalModal'),modalText:$('modalText'),closeModal:$('closeModal'),modalOk:$('modalOk')
 };
 
-const meshFormats=new Set(['stl','obj','3mf','glb','gltf']);
+const meshFormats=new Set(['stl','obj','3mf','glb','gltf','ply']);
 const cadFormats=new Set(['step','stp','iges','igs','brep']);
 const professionalFormats=new Set(['x_t','x_b','3dxml']);
 const supportedFormats=new Set([...meshFormats,...cadFormats,...professionalFormats]);
@@ -87,7 +86,7 @@ function toast(message,type='info'){clearTimeout(state.toastTimer);ui.toast.text
 function showProfessional(extension){ui.modalText.textContent=`Arquivos .${extension.toUpperCase()} exigem um tradutor comercial licenciado para preservar superfícies, sólidos, montagem e metadados com fidelidade.`;ui.professionalModal.hidden=false;}
 
 function disposeObject(object){object.traverse(child=>{child.geometry?.dispose();const materials=Array.isArray(child.material)?child.material:[child.material];materials.filter(Boolean).forEach(material=>{material.map?.dispose();material.dispose?.();});});}
-function clearModel(){orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
+function clearModel(){cancelExport();orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
 
 function cadResultToObject(result){
   const group=new THREE.Group();group.name=result.root?.name||state.file?.name||'Modelo CAD';
@@ -119,7 +118,7 @@ function normalizeObject(object){
 }
 
 async function parseMeshFile(file,extension,buffer){
-  if(extension==='stl'){const geometry=new STLLoader().parse(buffer);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,createMaterial(0x83aeb7));mesh.name=file.name;return mesh;}
+  if(extension==='stl'||extension==='ply'){const geometry=extension==='stl'?new STLLoader().parse(buffer):new PLYLoader().parse(buffer);geometry.computeVertexNormals();const mesh=new THREE.Mesh(geometry,createMaterial(0x83aeb7));mesh.name=file.name;return mesh;}
   if(extension==='obj'){const text=new TextDecoder().decode(buffer);return new OBJLoader().parse(text);}
   if(extension==='3mf')return new ThreeMFLoader().parse(buffer);
   if(['glb','gltf'].includes(extension)){return new Promise((resolve,reject)=>new GLTFLoader().parse(buffer,'',gltf=>resolve(gltf.scene),reject));}
@@ -132,7 +131,7 @@ async function loadFile(file){
   const extension=extensionOf(file.name);
   if(!supportedFormats.has(extension)){toast(`O formato .${extension||'?'} ainda não é compatível.`,'error');return;}
   if(professionalFormats.has(extension)){showProfessional(extension);return;}
-  clearModel();state.file=file;state.extension=extension;showLoading(cadFormats.has(extension)?'Preparando o núcleo CAD…':'Lendo o modelo…');
+  clearModel();state.file=file;state.extension=extension;ui.modelUnit.value=['glb','gltf'].includes(extension)?'1000':'1';showLoading(cadFormats.has(extension)?'Preparando o núcleo CAD…':'Lendo o modelo…');
   try{
     const buffer=await file.arrayBuffer();setProgress(15,null,'Arquivo carregado; interpretando a geometria');
     const object=cadFormats.has(extension)?await parseCadFile(buffer,extension):await parseMeshFile(file,extension,buffer);
@@ -146,7 +145,7 @@ function finishLoad(){
   ui.emptyState.hidden=true;ui.openAnother.hidden=false;[ui.modelPanel,ui.measurePanel,ui.sectionPanel,ui.convertPanel].forEach(panel=>panel.hidden=false);
   document.querySelectorAll('.viewer-toolbar button').forEach(button=>button.disabled=false);ui.toggleAll.disabled=false;
   ui.fileName.textContent=state.file.name;ui.fileFormat.textContent=state.extension.toUpperCase();ui.fileSize.textContent=formatBytes(state.file.size);ui.badgeName.textContent=state.file.name;ui.modelBadge.hidden=false;ui.statusText.textContent=`${state.file.name} carregado`;
-  buildTree();applyDisplayMode('shaded');updateSectionPlane();hideLoading();toast('Modelo carregado. Use as ferramentas para inspecionar e medir.');
+  updateConversionNote();buildTree();applyDisplayMode('shaded');updateSectionPlane();hideLoading();toast('Modelo carregado. Use as ferramentas para inspecionar e medir.');
 }
 
 function geometryTriangles(geometry){return geometry.index?geometry.index.count/3:geometry.attributes.position.count/3;}
@@ -249,10 +248,32 @@ function clearMeasurements(){hideVertexPreview();measurementRoot.children.forEac
 
 function safeName(){return(state.file?.name||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_');}
 function download(data,name,type){const blob=data instanceof Blob?data:new Blob([data],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-async function exportModel(){
-  if(!state.model)return;const format=ui.exportFormat.value;ui.exportButton.disabled=true;ui.exportButton.querySelector('span').textContent='Convertendo…';const previousEdges=state.edges.map(edge=>edge.visible);state.edges.forEach(edge=>edge.visible=false);measurementRoot.visible=false;
-  try{state.model.updateMatrixWorld(true);if(format==='stl'){const data=new STLExporter().parse(state.model,{binary:true});download(data,`${safeName()}.stl`,'model/stl');}else if(format==='obj'){const data=new OBJExporter().parse(state.model);download(data,`${safeName()}.obj`,'text/plain');}else{const data=await new GLTFExporter().parseAsync(state.model,{binary:true,onlyVisible:true});download(data,`${safeName()}.glb`,'model/gltf-binary');}toast(`Conversão concluída: ${safeName()}.${format}`);}catch(error){toast(`Falha na conversão: ${error.message}`,'error');console.error(error);}finally{state.edges.forEach((edge,index)=>edge.visible=previousEdges[index]);measurementRoot.visible=true;ui.exportButton.disabled=false;ui.exportButton.querySelector('span').textContent='Converter e baixar';}
+let exportJob=null;
+function cancelExport(){exportJob?.abort();}
+function updateConversionNote(){
+  const isCadOutput=cadOutputFormats.has(ui.exportFormat.value),isCadInput=cadFormats.has(state.extension);
+  const detail=isCadOutput?(isCadInput?'Conversão da geometria CAD original, sem passar pela malha. Cores, nomes e estrutura da montagem podem não ser preservados.':'Saída CAD facetada: cada triângulo vira uma face. Não recupera curvas, superfícies suaves ou histórico, nem garante um sólido fechado. Malhas grandes podem gerar arquivos pesados.'):'Exportação da malha visualizada. Curvas CAD são aproximadas por triângulos.';
+  $('conversionNote').textContent=`${detail} Inclui todos os corpos, mesmo ocultos, sem aplicar o corte de visualização.`;
 }
+async function exportModel(){
+  if(!state.model||exportJob)return;
+  const job=new AbortController();exportJob=job;
+  const format=ui.exportFormat.value,name=`${safeName()}.${format}`;
+  ui.exportButton.disabled=true;ui.exportFormat.disabled=true;ui.modelUnit.disabled=true;
+  ui.exportButton.querySelector('span').textContent='Convertendo…';$('cancelExport').hidden=false;$('exportStatus').textContent='Preparando conversão…';
+  try{
+    const blob=await convertModel({model:state.model,file:state.file,extension:state.extension,scale:Number(ui.modelUnit.value)||1,format,signal:job.signal,onProgress:message=>{$('exportStatus').textContent=message;}});
+    job.signal.throwIfAborted();download(blob,name,blob.type);$('exportStatus').textContent=`Pronto: ${name}`;toast(`Conversão concluída: ${name}`);
+  }catch(error){
+    if(error.name==='AbortError')$('exportStatus').textContent='Conversão cancelada.';
+    else{$('exportStatus').textContent=`Falha: ${error.message}`;toast(`Falha na conversão: ${error.message}`,'error');console.error(error);}
+  }finally{
+    exportJob=null;ui.exportButton.disabled=false;ui.exportFormat.disabled=false;ui.modelUnit.disabled=false;
+    ui.exportButton.querySelector('span').textContent='Converter e baixar';$('cancelExport').hidden=true;
+  }
+}
+ui.exportFormat.addEventListener('change',updateConversionNote);
+$('cancelExport').addEventListener('click',cancelExport);
 
 function handleFiles(files){const file=files?.[0];if(file)loadFile(file);}
 [ui.fileInput,ui.centerFileInput].forEach(input=>input.addEventListener('change',event=>{handleFiles(event.target.files);event.target.value='';}));
