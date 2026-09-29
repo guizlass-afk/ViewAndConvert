@@ -1,4 +1,4 @@
-import {createDrawingSheet} from './drawing-sheet.js?v=2';
+import {createDrawingSheet} from './drawing-sheet.js?v=3';
 import {convertModel,cadOutputFormats} from './model-export.js?v=1';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';

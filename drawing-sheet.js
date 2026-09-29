@@ -99,7 +99,19 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
   panel.addEventListener('keydown',event=>{if(event.target.matches('input,select'))return;if(event.key==='Escape'){picks=[];render();prompt();}if(event.key==='Delete'){event.preventDefault();removeSelection();}if((event.ctrlKey||event.metaKey)&&event.key==='z'){event.preventDefault();$('undoDrawing').click();}});
   document.querySelectorAll('[data-drawing-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.drawingTool)));
   $('linearDirection').addEventListener('change',()=>{picks=[];render();prompt();});
-  $('drawingZoom').addEventListener('change',()=>{sheet.style.width=`${Number($('drawingZoom').value)*100}%`;});
+  const paperWrap=sheet.parentElement;
+  function fitPaper(){
+    if(panel.hidden)return;
+    const zoom=Number($('drawingZoom').value)||1;
+    paperWrap.classList.toggle('is-zoomed',zoom>1);
+    const style=getComputedStyle(paperWrap),width=paperWrap.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight),height=paperWrap.clientHeight-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
+    if(width<=0||height<=0)return;
+    const fittedWidth=Math.min(width,height*297/210),paperWidth=fittedWidth*zoom,paperHeight=paperWidth*210/297;
+    sheet.style.width=`${paperWidth}px`;sheet.style.height=`${paperHeight}px`;sheet.style.marginTop=`${Math.max(0,(height-paperHeight)/2)}px`;
+    if(zoom===1){paperWrap.scrollTop=0;paperWrap.scrollLeft=0;}
+  }
+  new ResizeObserver(fitPaper).observe(paperWrap);
+  $('drawingZoom').addEventListener('change',fitPaper);
   $('drawingUnit').addEventListener('change',()=>{unit=$('drawingUnit').value;render();});
   $('drawingScale').addEventListener('change',()=>{
     const value=Number($('drawingScale').value);if(items.some(v=>(v.data.maxX-v.data.minX)*value>260||(v.data.maxY-v.data.minY)*value>155)){hint('Essa escala ultrapassa a área útil da folha. Escolha uma escala menor.');$('drawingScale').value=String(scale);return;}
@@ -115,7 +127,7 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
     }catch(error){if(error.name!=='AbortError')hint(`Não foi possível projetar: ${error.message}`);}
     finally{if(job===controller){job=null;$('addDrawingView').disabled=false;}}
   });
-  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));$('toggleDrawing').textContent=value?'← Voltar ao 3D':'← Gerar folha 2D';if(value)render();onLayout();}
+  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));$('toggleDrawing').textContent=value?'← Voltar ao 3D':'← Gerar folha 2D';if(value){render();fitPaper();}onLayout();}
   $('toggleDrawing').addEventListener('click',()=>open(panel.hidden));$('closeDrawing').addEventListener('click',()=>{open(false);$('toggleDrawing').focus();});
   const filename=()=>`${(getName()||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_')}_folha_A4`;
   $('downloadDrawing').textContent='Baixar PDF';$('printDrawing').textContent='Baixar DWG';

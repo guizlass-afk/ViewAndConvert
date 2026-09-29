@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
   <title>View & Convert — Visualizador 3D</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -123,6 +123,7 @@
     </section>
 
     <section id="drawingPanel" class="drawing-panel" hidden aria-label="Folha de desenho 2D">
+      <aside class="drawing-sidebar" aria-label="Ferramentas da folha 2D">
       <header class="drawing-heading"><div><h2>Folha 2D</h2><p>A4 · Paisagem · 297 × 210 mm · Modelo completo</p></div><button id="closeDrawing" type="button" aria-label="Fechar folha 2D">×</button></header>
       <div class="drawing-controls">
         <label>Vista<select id="drawingView"><option value="top">SUPERIOR</option><option value="bottom">INFERIOR</option><option value="front">FRONTAL</option><option value="back">TRÁS</option><option value="right">DIREITA</option><option value="left">ESQUERDA</option><option value="iso">ISOMÉTRICA</option></select></label>
@@ -144,8 +145,10 @@
         <button id="undoDrawing" type="button" disabled>Desfazer</button><button id="deleteDrawing" type="button" disabled>Excluir seleção</button>
       </div>
       <p id="drawingHint" class="drawing-hint" role="status">Insira uma vista para começar.</p>
-      <div class="drawing-paper-wrap"><svg id="drawingSheet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210" width="297mm" height="210mm" role="img" aria-label="Folha A4 em paisagem"></svg></div>
       <footer class="drawing-footer"><span>Vistas da malha · cotas na projeção; isométrica usa distância e ângulo 3D.</span><button id="downloadDrawing" type="button">Baixar PDF</button><button id="printDrawing" type="button">Baixar DWG</button></footer>
+      </aside>
+      <div class="drawing-paper-wrap"><svg id="drawingSheet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210" width="297mm" height="210mm" role="img" aria-label="Folha A4 em paisagem"></svg></div>
+
     </section>
     <aside class="sidebar right-sidebar">
       <section class="panel tree-panel">
@@ -183,6 +186,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=7"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 </html>

@@ -67,6 +67,8 @@ Testes de download e reimportação em todos os formatos, superfícies curvas, u
 
 ## Folha 2D
 
+As ferramentas ficam na lateral direita. Em 100%, a folha inteira se ajusta ao espaço disponível; as barras de rolagem da folha aparecem somente ao ampliar o zoom.
+
 Depois de abrir um modelo, clique em **Gerar folha 2D** no topo. O painel ocupa a área do visualizador, ocultando temporariamente o 3D, com uma folha **A4 paisagem (297 × 210 mm)**. Selecione e insira as vistas superior, inferior, frontal, trás, direita, esquerda e isométrica. Use **Voltar ao 3D** para retornar ao modelo sem perder a folha. Cada vista pode ser arrastada; a escala é comum à folha, e o zoom altera apenas a ampliação na tela.
 
 - **Linear:** escolha alinhada, horizontal ou vertical; clique em dois vértices destacados da mesma vista e depois na posição da cota.

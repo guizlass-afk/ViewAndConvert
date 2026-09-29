@@ -23,6 +23,15 @@ try:
   page.locator('#fileInput').set_input_files({'name':'bloco.obj','mimeType':'text/plain','buffer':OBJ})
   page.locator('#loading').wait_for(state='hidden');page.locator('#toggleDrawing').click()
   assert page.locator('#drawingPanel').is_visible()
+  for width,height in [(1337,620),(1440,1000),(1000,650),(600,700)]:
+   page.set_viewport_size({'width':width,'height':height})
+   page.wait_for_timeout(150)
+   fit=page.evaluate("""()=>{const wrap=document.querySelector('.drawing-paper-wrap'),sheet=document.querySelector('#drawingSheet').getBoundingClientRect(),side=document.querySelector('.drawing-sidebar').getBoundingClientRect();return {fits:wrap.scrollWidth<=wrap.clientWidth+1&&wrap.scrollHeight<=wrap.clientHeight+1,visible:sheet.top>=0&&sheet.bottom<=innerHeight+1&&sheet.right<=side.left+1}}""")
+   assert fit['fits'] and fit['visible'],(width,height,fit)
+   if width==1337:page.screenshot(path=str(Path(os.environ['TEMP'])/'viewconvert-sidebar.png'))
+  page.set_viewport_size({'width':1440,'height':1000})
+  page.wait_for_timeout(150)
+  print('PASS: full sheet fits without scrolling at four viewport sizes; tools on the right.',flush=True)
   for kind in ['front','top','bottom','back','right','left','iso']:
    page.locator('#drawingView').select_option(kind);page.locator('#addDrawingView').click()
    page.locator(f'[data-sheet-view][data-kind={kind}]').wait_for()
@@ -88,8 +97,10 @@ try:
   page.mouse.move(at['x'],at['y']);page.mouse.down();page.mouse.move(at['x']+18,at['y']+10,steps=4);page.mouse.up()
   assert view.get_attribute('transform')!=original
   page.locator('#undoDrawing').click();assert view.get_attribute('transform')==original
+  paper_before=page.locator('#drawingSheet').bounding_box()['width']
   page.locator('#drawingZoom').select_option('2')
-  assert page.locator('#drawingSheet').evaluate('el=>el.style.width')=='200%'
+  page.wait_for_function('document.querySelector(".drawing-paper-wrap").scrollWidth>document.querySelector(".drawing-paper-wrap").clientWidth || document.querySelector(".drawing-paper-wrap").scrollHeight>document.querySelector(".drawing-paper-wrap").clientHeight')
+  assert page.locator('#drawingSheet').bounding_box()['width']>paper_before*1.8
   page.locator('#drawingZoom').select_option('1')
   annotation=page.locator('[data-sheet-annotation]').first
   annotation.locator('text').click()
