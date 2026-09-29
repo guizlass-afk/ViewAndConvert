@@ -1,4 +1,4 @@
-import {createDrawingSheet} from './drawing-sheet.js?v=3';
+import {createDrawingSheet} from './drawing-sheet.js?v=4';
 import {convertModel,cadOutputFormats} from './model-export.js?v=1';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';
@@ -96,6 +96,7 @@ function cadResultToObject(result){
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(item.attributes.position.array,3));
     if(item.attributes.normal)geometry.setAttribute('normal',new THREE.Float32BufferAttribute(item.attributes.normal.array,3));else geometry.computeVertexNormals();
     if(item.index?.array)geometry.setIndex(new THREE.BufferAttribute(Uint32Array.from(item.index.array),1));
+    geometry.userData.cadFaces=item.brep_faces?.map(face=>({first:face.first,last:face.last}))||[];
     const color=item.color?new THREE.Color(item.color[0],item.color[1],item.color[2]):new THREE.Color(0x85aeb7);
     const material=createMaterial(color);
     if(item.brep_faces?.length){const materials=[material];let triangle=0,faceIndex=0,total=(item.index?.array?.length||item.attributes.position.array.length)/3;while(triangle<total){const face=item.brep_faces[faceIndex];if(!face||triangle<face.first){const last=face?face.first:total;geometry.addGroup(triangle*3,(last-triangle)*3,0);triangle=last;}else{const faceMaterial=createMaterial(face.color?new THREE.Color(...face.color):color);materials.push(faceMaterial);const last=face.last+1;geometry.addGroup(triangle*3,(last-triangle)*3,materials.length-1);triangle=last;faceIndex++;}}const mesh=new THREE.Mesh(geometry,materials);mesh.name=item.name||`Corpo ${group.children.length+1}`;group.add(mesh);}else{const mesh=new THREE.Mesh(geometry,material);mesh.name=item.name||`Corpo ${group.children.length+1}`;group.add(mesh);}

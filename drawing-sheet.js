@@ -1,4 +1,4 @@
-import {prepareDrawingGeometry,projectDrawingView} from './drawing-projection.js?v=1';
+import {prepareDrawingGeometry,projectDrawingView} from './drawing-projection.js?v=2';
 import {exportDrawingPdf,exportDrawingDwg} from './drawing-export.js?v=1';
 const NS='http://www.w3.org/2000/svg',factors={mm:1,cm:10,in:25.4,m:1000};
 const el=(tag,attrs={},text)=>{const node=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))node.setAttribute(k,v);if(text!==undefined)node.textContent=text;return node;};

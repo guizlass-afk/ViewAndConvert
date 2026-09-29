@@ -19,6 +19,24 @@ try:
   page=browser.new_page(viewport={'width':1440,'height':1000});page.set_default_timeout(120000)
   errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(f'http://127.0.0.1:{server.server_port}/');page.wait_for_function('!!window.ViewConvertCore')
+  regression=page.evaluate("""async()=>{
+   const THREE=await import('three'),{prepareDrawingGeometry,projectDrawingView}=await import('./drawing-projection.js?v=2');
+   const signal=new AbortController().signal;
+   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute([1.23,-1,1,1.25,-1,1,1.24,1,1],3));
+   const source=await prepareDrawingGeometry(new THREE.Mesh(geometry),signal);
+   const a=new THREE.Vector3(0,0,0),b=new THREE.Vector3(10,0,0);
+   source.edges=[{a,b,normals:[new THREE.Vector3(0,0,1)],faces:new Set()}];source.vertices=[a,b];
+   const result=await projectDrawingView(source,'top',signal);
+   const gap=result.segments.length===2?result.segments[1][0]-result.segments[0][2]:0;source.dispose();
+   const plane=new THREE.PlaneGeometry(10,10);plane.userData.cadFaces=[{first:0,last:0},{first:1,last:1}];
+   const cad=await prepareDrawingGeometry(new THREE.Mesh(plane),signal),cadView=await projectDrawingView(cad,'top',signal);cad.dispose();
+   plane.userData.cadFaces=[];
+   const mesh=await prepareDrawingGeometry(new THREE.Mesh(plane),signal),meshView=await projectDrawingView(mesh,'top',signal);mesh.dispose();
+   return {segments:result.segments.length,gap,cadEdges:cadView.segments.length,meshEdges:meshView.segments.length};
+  }""")
+  assert regression['segments']==2 and abs(regression['gap']-.01)<.0001,regression
+  assert regression['cadEdges']==5 and regression['meshEdges']==4,regression
+  print('PASS: continuous hidden-line clipping detects thin occluder; CAD boundaries retained without mesh diagonals.',flush=True)
   assert page.locator('#toggleDrawing').is_disabled()
   page.locator('#fileInput').set_input_files({'name':'bloco.obj','mimeType':'text/plain','buffer':OBJ})
   page.locator('#loading').wait_for(state='hidden');page.locator('#toggleDrawing').click()
