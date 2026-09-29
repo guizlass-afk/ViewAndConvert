@@ -18,6 +18,26 @@ try:
         page.wait_for_function('!!window.ViewConvertCore')
         page.locator('#fileInput').set_input_files({'name': 'triangle.obj', 'mimeType': 'text/plain', 'buffer': b'v 0 0 0\nv 30 40 120\nv 30 0 0\nf 1 2 3\n'})
         page.locator('#loading').wait_for(state='hidden')
+        indicator=page.locator('#orientationAxes')
+        assert indicator.is_visible()
+        assert page.locator('.axis-cube').count() == 0
+        before=indicator.inner_html()
+        page.locator('[data-view="front"]').click()
+        page.wait_for_function("Math.abs(Number(document.querySelector('#orientationAxes [data-axis=X] line').getAttribute('x2'))-80)<0.1")
+        assert indicator.inner_html() != before
+        page.wait_for_function("Math.abs(Number(document.querySelector('#orientationAxes [data-axis=Z] line').getAttribute('y2'))-20)<0.1")
+        assert indicator.evaluate("el=>getComputedStyle(el).pointerEvents") == 'none'
+        rect=indicator.bounding_box()
+        canvas=page.locator('#canvas').bounding_box()
+        assert abs(rect['x']+rect['width']-(canvas['x']+canvas['width']-12))<1
+        grid_button=page.locator('#toggleGrid')
+        image_with_grid=page.locator('#canvas').screenshot()
+        grid_button.click()
+        assert grid_button.get_attribute('aria-pressed') == 'false'
+        assert page.locator('#canvas').screenshot() != image_with_grid
+        grid_button.click()
+        assert grid_button.get_attribute('aria-pressed') == 'true'
+        page.locator('#resetView').click()
         page.locator('#measureButton').click()
         points = page.evaluate("""async () => {
             const THREE = await import('three');

@@ -45,13 +45,35 @@ const fillLight=new THREE.DirectionalLight(0xbad7e7,1.35);fillLight.position.set
 const modelRoot=new THREE.Group();modelRoot.name='Modelo';scene.add(modelRoot);
 const measurementRoot=new THREE.Group();measurementRoot.name='Medições';scene.add(measurementRoot);
 const grid=new THREE.GridHelper(1000,20,0xb6c7cb,0xd5e0e2);grid.rotation.x=Math.PI/2;grid.position.z=-.5;grid.material.opacity=.5;grid.material.transparent=true;scene.add(grid);
-const axes=new THREE.AxesHelper(100);scene.add(axes);
+// Project the model axes with the camera rotation, but anchor them in the corner.
+const orientationAxes=$('orientationAxes');
+const svgNamespace='http://www.w3.org/2000/svg';
+const orientationDirections=[['X',0xd9553d,new THREE.Vector3(1,0,0)],['Y',0x16835e,new THREE.Vector3(0,1,0)],['Z',0x267fba,new THREE.Vector3(0,0,1)]].map(([label,color,direction])=>{
+  const group=document.createElementNS(svgNamespace,'g'),line=document.createElementNS(svgNamespace,'line'),tip=document.createElementNS(svgNamespace,'circle'),text=document.createElementNS(svgNamespace,'text');
+  group.dataset.axis=label;group.setAttribute('fill',`#${color.toString(16).padStart(6,'0')}`);
+  line.setAttribute('stroke','currentColor');line.style.color=`#${color.toString(16).padStart(6,'0')}`;line.setAttribute('stroke-width','2');line.setAttribute('stroke-linecap','round');
+  line.setAttribute('x1','50');line.setAttribute('y1','50');tip.setAttribute('r','3');text.textContent=label;text.setAttribute('text-anchor','middle');text.setAttribute('dominant-baseline','central');
+  group.append(line,tip,text);orientationAxes.append(group);return{direction,group,line,tip,text,view:new THREE.Vector3()};
+});
+const orientationInverse=new THREE.Quaternion();
+function updateOrientationAxes(){
+  if(orientationAxes.hasAttribute('hidden'))return;
+  orientationInverse.copy(camera.quaternion).invert();
+  for(const axis of orientationDirections)axis.view.copy(axis.direction).applyQuaternion(orientationInverse);
+  // Draw the axis facing the viewer last, as with the model's depth order.
+  for(const axis of [...orientationDirections].sort((a,b)=>a.view.z-b.view.z)){
+    const x=50+axis.view.x*30,y=50-axis.view.y*30;
+    axis.line.setAttribute('x2',x);axis.line.setAttribute('y2',y);axis.tip.setAttribute('cx',x);axis.tip.setAttribute('cy',y);
+    axis.text.setAttribute('x',50+axis.view.x*42);axis.text.setAttribute('y',50-axis.view.y*42);
+    axis.group.setAttribute('opacity',axis.view.z<-.01?'.6':'1');orientationAxes.append(axis.group);
+  }
+}
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
 
 function resize(){const rect=ui.viewport.getBoundingClientRect();if(!rect.width||!rect.height)return;renderer.setSize(rect.width,rect.height,false);camera.aspect=rect.width/rect.height;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(ui.viewport);resize();
-renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);updateOrientationAxes();});
 
 function extensionOf(name){const lower=name.toLowerCase();if(lower.endsWith('.x_t'))return'x_t';if(lower.endsWith('.x_b'))return'x_b';return lower.includes('.')?lower.split('.').pop():'';}
 function formatBytes(bytes){if(bytes<1024)return`${bytes} B`;if(bytes<1048576)return`${(bytes/1024).toFixed(1)} KB`;return`${(bytes/1048576).toFixed(1)} MB`;}
@@ -65,7 +87,7 @@ function toast(message,type='info'){clearTimeout(state.toastTimer);ui.toast.text
 function showProfessional(extension){ui.modalText.textContent=`Arquivos .${extension.toUpperCase()} exigem um tradutor comercial licenciado para preservar superfícies, sólidos, montagem e metadados com fidelidade.`;ui.professionalModal.hidden=false;}
 
 function disposeObject(object){object.traverse(child=>{child.geometry?.dispose();const materials=Array.isArray(child.material)?child.material:[child.material];materials.filter(Boolean).forEach(material=>{material.map?.dispose();material.dispose?.();});});}
-function clearModel(){if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
+function clearModel(){orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
 
 function cadResultToObject(result){
   const group=new THREE.Group();group.name=result.root?.name||state.file?.name||'Modelo CAD';
@@ -120,6 +142,7 @@ async function loadFile(file){
 
 function applyModelScale(){if(!state.model)return;clearMeasurements();const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
 function finishLoad(){
+  orientationAxes.removeAttribute('hidden');
   ui.emptyState.hidden=true;ui.openAnother.hidden=false;[ui.modelPanel,ui.measurePanel,ui.sectionPanel,ui.convertPanel].forEach(panel=>panel.hidden=false);
   document.querySelectorAll('.viewer-toolbar button').forEach(button=>button.disabled=false);ui.toggleAll.disabled=false;
   ui.fileName.textContent=state.file.name;ui.fileFormat.textContent=state.extension.toUpperCase();ui.fileSize.textContent=formatBytes(state.file.size);ui.badgeName.textContent=state.file.name;ui.modelBadge.hidden=false;ui.statusText.textContent=`${state.file.name} carregado`;
@@ -139,7 +162,7 @@ function refreshAnalysis(){
   ui.meshCount.textContent=state.meshes.length.toLocaleString('pt-BR');ui.triangleCount.textContent=state.metrics.triangles.toLocaleString('pt-BR');ui.vertexCount.textContent=state.metrics.vertices.toLocaleString('pt-BR');ui.renderInfo.textContent=`${state.meshes.length} objeto(s) · ${state.metrics.triangles.toLocaleString('pt-BR')} triângulos`;
   ui.dimensions.textContent=`${formatLength(size.x)} × ${formatLength(size.y)} × ${formatLength(size.z)}`;ui.dimensionsUnit.textContent=`comprimento × largura × altura em ${unitLabels[ui.displayUnit.value]}`;ui.bounds.textContent=ui.dimensions.textContent;
   const factor=unitFactors[ui.displayUnit.value]||1;ui.surfaceArea.textContent=`${locale(state.metrics.area/(factor*factor),2)} ${unitLabels[ui.displayUnit.value]}²`;ui.volume.textContent=`${locale(state.metrics.volume/(factor*factor*factor),2)} ${unitLabels[ui.displayUnit.value]}³`;
-  const maxSize=Math.max(size.x,size.y,size.z,1);grid.scale.setScalar(Math.max(.1,maxSize/800));axes.scale.setScalar(Math.max(.1,maxSize/800));grid.position.z=state.bounds.min.z-Math.max(maxSize*.003,.01);
+  const maxSize=Math.max(size.x,size.y,size.z,1);grid.scale.setScalar(Math.max(.1,maxSize/800));grid.position.z=state.bounds.min.z-Math.max(maxSize*.003,.01);
   updateSectionPlane();renderMeasurementList();
 }
 
@@ -238,6 +261,7 @@ ui.openAnother.addEventListener('click',()=>ui.fileInput.click());
 ['dragleave','drop'].forEach(type=>ui.viewport.addEventListener(type,event=>{event.preventDefault();ui.viewport.classList.remove('dragging');if(type==='drop')handleFiles(event.dataTransfer.files);}));
 ['dragenter','dragover'].forEach(type=>ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.add('dragging');}));
 ['dragleave','drop'].forEach(type=>ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.remove('dragging');if(type==='drop')handleFiles(event.dataTransfer.files);}));
+$('toggleGrid').addEventListener('click',()=>{grid.visible=!grid.visible;const button=$('toggleGrid');button.classList.toggle('active',grid.visible);button.setAttribute('aria-pressed',String(grid.visible));button.title=grid.visible?'Ocultar grade':'Mostrar grade';});
 ui.fitView.addEventListener('click',()=>fitCamera());ui.resetView.addEventListener('click',()=>fitCamera('iso'));
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>fitCamera(button.dataset.view)));
 document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>applyDisplayMode(button.dataset.mode)));
