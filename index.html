@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
   <title>View & Convert — Visualizador 3D</title>
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=6">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -17,6 +17,7 @@
       <span class="brand-name"><strong>View</strong><em>&amp;</em><b>Convert</b></span>
     </a>
     <div class="topbar-copy"><strong>Visualizador e conversor 3D</strong><span>Ferramentas para projetos mecânicos</span></div>
+    <button id="toggleDrawing" class="drawing-toggle" type="button" aria-expanded="false" aria-controls="drawingPanel" disabled>← Gerar folha 2D</button>
     <div class="privacy"><i></i><span>Processamento local e seguro</span></div>
   </header>
 
@@ -121,6 +122,31 @@
       <div class="viewer-footer"><span id="statusText">Nenhum modelo carregado</span><span id="cursorPosition">X 0,00 · Y 0,00 · Z 0,00</span><span id="renderInfo">0 objetos · 0 triângulos</span></div>
     </section>
 
+    <section id="drawingPanel" class="drawing-panel" hidden aria-label="Folha de desenho 2D">
+      <header class="drawing-heading"><div><h2>Folha 2D</h2><p>A4 · Paisagem · 297 × 210 mm · Modelo completo</p></div><button id="closeDrawing" type="button" aria-label="Fechar folha 2D">×</button></header>
+      <div class="drawing-controls">
+        <label>Vista<select id="drawingView"><option value="top">SUPERIOR</option><option value="bottom">INFERIOR</option><option value="front">FRONTAL</option><option value="back">TRÁS</option><option value="right">DIREITA</option><option value="left">ESQUERDA</option><option value="iso">ISOMÉTRICA</option></select></label>
+        <button id="addDrawingView" type="button">+ Inserir vista</button>
+        <label>Escala<select id="drawingScale"><option value="10">10:1</option><option value="5">5:1</option><option value="2">2:1</option><option value="1">1:1</option><option value="0.5">1:2</option><option value="0.2">1:5</option><option value="0.1">1:10</option><option value="0.05">1:20</option><option value="0.02">1:50</option><option value="0.01">1:100</option><option value="0.005">1:200</option><option value="0.002">1:500</option><option value="0.001">1:1000</option></select></label>
+        <label>Cotas em<select id="drawingUnit"><option value="mm">mm</option><option value="cm">cm</option><option value="in">pol</option><option value="m">m</option></select></label>
+      </div>
+      <div class="drawing-tools" role="group" aria-label="Ferramentas da folha">
+        <button type="button" data-drawing-tool="move" aria-pressed="true">Mover / selecionar</button>
+        <button type="button" data-drawing-tool="linear" aria-pressed="false">↔ Linear</button>
+        <button type="button" data-drawing-tool="angle" aria-pressed="false">∠ Angular</button>
+        <button type="button" data-drawing-tool="diameter" aria-pressed="false">⌀ Diâmetro</button>
+        <button type="button" data-drawing-tool="radius" aria-pressed="false">R Raio</button>
+      </div>
+      <div class="drawing-options">
+        <label id="linearOptions" hidden>Direção<select id="linearDirection"><option value="aligned">Alinhada</option><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label>
+        <label id="annotationOptions" hidden>Valor manual<input id="drawingAnnotation" type="text" maxlength="50" placeholder="Ex.: 12 mm"></label>
+        <label>Zoom<select id="drawingZoom"><option value="1">100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="3">300%</option></select></label>
+        <button id="undoDrawing" type="button" disabled>Desfazer</button><button id="deleteDrawing" type="button" disabled>Excluir seleção</button>
+      </div>
+      <p id="drawingHint" class="drawing-hint" role="status">Insira uma vista para começar.</p>
+      <div class="drawing-paper-wrap"><svg id="drawingSheet" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 297 210" width="297mm" height="210mm" role="img" aria-label="Folha A4 em paisagem"></svg></div>
+      <footer class="drawing-footer"><span>Vistas da malha · cotas na projeção; isométrica usa distância e ângulo 3D.</span><button id="downloadDrawing" type="button">Baixar PDF</button><button id="printDrawing" type="button">Baixar DWG</button></footer>
+    </section>
     <aside class="sidebar right-sidebar">
       <section class="panel tree-panel">
         <div class="panel-title"><div><h2>Estrutura do modelo</h2><p>Componentes e corpos</p></div><button id="toggleAll" type="button" disabled title="Exibir ou ocultar todos">◉</button></div>
@@ -157,6 +183,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=5"></script>
+  <script type="module" src="app.js?v=6"></script>
 </body>
 </html>

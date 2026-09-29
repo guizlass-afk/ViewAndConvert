@@ -64,3 +64,22 @@ A unidade do arquivo determina a escala física. STEP e IGES são normalizados e
 O motor adicional [OpenCascade.js](https://ocjs.org/docs/app-dev-workflow/pre-built), fixado em `2.0.0-beta.b5ff984`, é carregado sob demanda para exportar CAD (WebAssembly de aproximadamente 50 MB no primeiro uso). O arquivo permanece no navegador. Cada conversão CAD usa um worker separado, encerrado ao concluir, cancelar ou falhar para liberar a memória. Malhas densas geram muitas faces e podem exceder a memória disponível; há cancelamento e um limite de dez minutos por conversão.
 
 Testes de download e reimportação em todos os formatos, superfícies curvas, unidades e cancelamento: `python tests/test_conversion.py`. Requer Python, Playwright e Chrome, além de internet para bibliotecas e geometrias de referência do projeto [occt-import-js](https://github.com/kovacsv/occt-import-js/tree/main/test/testfiles).
+
+## Folha 2D
+
+Depois de abrir um modelo, clique em **Gerar folha 2D** no topo. O painel abre ao lado do 3D com uma folha **A4 paisagem (297 × 210 mm)**. Selecione e insira as vistas superior, inferior, frontal, trás, direita, esquerda e isométrica. Cada vista pode ser arrastada; a escala é comum à folha, e o zoom altera apenas a ampliação na tela.
+
+- **Linear:** escolha alinhada, horizontal ou vertical; clique em dois vértices destacados da mesma vista e depois na posição da cota.
+- **Angular:** clique na primeira extremidade, no vértice central e na segunda extremidade; o quarto clique posiciona o arco.
+- **Diâmetro / raio:** informe o valor manual (por exemplo, `12 mm`), clique na geometria e depois na posição do texto. Não há reconhecimento automático de círculos.
+- **Mover / selecionar:** arraste vistas ou cotas. **Excluir seleção**, **Desfazer**, Delete e Ctrl+Z atuam na folha. Escape cancela a seleção de pontos em andamento.
+- **PDF:** download vetorial de uma página A4 paisagem, com textos e cotas.
+- **DWG:** arquivo nativo AutoCAD R2000 (`AC1015`), com linhas e textos editáveis, validado também com um leitor LibreDWG independente. As cotas são representações gráficas, não entidades DIMENSION associativas. As coordenadas ficam em milímetros da folha, no espaço de modelo, já com a escala aplicada.
+
+As vistas incluem o modelo completo, mesmo corpos ocultos, sem aplicar o corte visual. As projeções usam as arestas e os contornos da malha importada, com teste de visibilidade amostrado; curvas ficam segmentadas e a precisão depende da tesselação. Não é uma extração exata das arestas BREP. Nas vistas ortogonais, cotas e ângulos são medidos no plano projetado; na isométrica, cotas alinhadas e ângulos usam os vértices 3D (horizontal/vertical continuam projetadas). O ângulo é o menor entre os dois segmentos, de 0 a 180 graus.
+
+A folha fica na sessão atual: fechar/reabrir o painel preserva o trabalho; carregar outro modelo, alterar a unidade do arquivo ou recarregar a página reinicia a folha. Baixe o PDF/DWG antes disso. A unidade das cotas da folha é independente da unidade exibida no painel 3D.
+
+Dependências carregadas sob demanda: [three-mesh-bvh 0.9.1](https://github.com/gkjohnson/three-mesh-bvh), [jsPDF 3.0.3](https://github.com/parallax/jsPDF) e [acad-ts 3.2.0](https://github.com/node-projects/acad-ts), todas com licença MIT. O processamento e a escrita dos arquivos ocorrem no navegador; os modelos não são enviados às CDNs.
+
+Validação: `python tests/test_drawing.py` (Python, Playwright, Chrome e pypdf). Cobre as sete vistas, cotas de 40 mm/90°, anotações, escala/unidades, arraste, exclusão/desfazer, zoom, reinicialização, PDF A4 e DWG reaberto com acad-ts e LibreDWG. Defina `DRAWING_TEST_ARTIFACTS` para preservar os arquivos e a captura de tela em uma pasta de revisão.

@@ -1,3 +1,4 @@
+import {createDrawingSheet} from './drawing-sheet.js?v=1';
 import {convertModel,cadOutputFormats} from './model-export.js?v=1';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';
@@ -86,7 +87,7 @@ function toast(message,type='info'){clearTimeout(state.toastTimer);ui.toast.text
 function showProfessional(extension){ui.modalText.textContent=`Arquivos .${extension.toUpperCase()} exigem um tradutor comercial licenciado para preservar superfícies, sólidos, montagem e metadados com fidelidade.`;ui.professionalModal.hidden=false;}
 
 function disposeObject(object){object.traverse(child=>{child.geometry?.dispose();const materials=Array.isArray(child.material)?child.material:[child.material];materials.filter(Boolean).forEach(material=>{material.map?.dispose();material.dispose?.();});});}
-function clearModel(){cancelExport();orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
+function clearModel(){drawing.reset();drawing.setAvailable(false);cancelExport();orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
 
 function cadResultToObject(result){
   const group=new THREE.Group();group.name=result.root?.name||state.file?.name||'Modelo CAD';
@@ -139,8 +140,9 @@ async function loadFile(file){
   }catch(error){clearModel();ui.loading.hidden=true;toast(`Não foi possível abrir o arquivo: ${error.message}`,'error');console.error(error);}
 }
 
-function applyModelScale(){if(!state.model)return;clearMeasurements();const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
+function applyModelScale(){if(!state.model)return;drawing.reset();clearMeasurements();const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
 function finishLoad(){
+  drawing.setAvailable(true);
   orientationAxes.removeAttribute('hidden');
   ui.emptyState.hidden=true;ui.openAnother.hidden=false;[ui.modelPanel,ui.measurePanel,ui.sectionPanel,ui.convertPanel].forEach(panel=>panel.hidden=false);
   document.querySelectorAll('.viewer-toolbar button').forEach(button=>button.disabled=false);ui.toggleAll.disabled=false;
@@ -295,7 +297,13 @@ document.querySelectorAll('[data-axis]').forEach(button=>button.addEventListener
 ui.toggleAll.addEventListener('click',()=>{state.allVisible=!state.allVisible;state.meshes.forEach(mesh=>mesh.visible=state.allVisible);ui.modelTree.querySelectorAll('input').forEach(input=>input.checked=state.allVisible);});
 ui.exportButton.addEventListener('click',exportModel);
 [ui.closeModal,ui.modalOk].forEach(button=>button.addEventListener('click',()=>ui.professionalModal.hidden=true));ui.professionalModal.addEventListener('click',event=>{if(event.target===ui.professionalModal)ui.professionalModal.hidden=true;});
-window.addEventListener('keydown',event=>{if(event.key==='Escape'){hideVertexPreview();state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.canvas.style.cursor='grab';ui.professionalModal.hidden=true;}if(event.key.toLowerCase()==='f'&&state.model)fitCamera();});
+window.addEventListener('keydown',event=>{if(event.target.closest('input,select,textarea,#drawingPanel'))return;if(event.key==='Escape'){hideVertexPreview();state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.canvas.style.cursor='grab';ui.professionalModal.hidden=true;}if(event.key.toLowerCase()==='f'&&state.model)fitCamera();});
 
+const drawing=createDrawingSheet({getModel:()=>state.model,getName:()=>state.file?.name||'',onLayout:()=>requestAnimationFrame(()=>{
+  resize();if(!state.model)return;
+  const direction=camera.position.clone().sub(controls.target).normalize(),center=state.bounds.getCenter(new THREE.Vector3()),radius=Math.max(state.bounds.getSize(new THREE.Vector3()).length()*.5,1);
+  const halfFov=Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*Math.min(1,camera.aspect)),distance=radius/Math.sin(halfFov)*1.15;
+  camera.position.copy(center).addScaledVector(direction,distance);camera.near=Math.max(distance/10000,.001);camera.far=distance*100;camera.updateProjectionMatrix();controls.target.copy(center);controls.update();
+})});
 ui.canvas.style.cursor='grab';updateSectionPlane();
 window.ViewConvertCore=Object.freeze({supportedFormats:[...supportedFormats],extensionOf,formatLength,calculateMetrics,loadFile});
