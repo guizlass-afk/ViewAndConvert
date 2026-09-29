@@ -33,3 +33,11 @@ Depois acesse `http://localhost:8080`.
 As bibliotecas Three.js e OpenCascade são carregadas de CDN; o modelo do usuário não é enviado a elas.
 
 Os testes de navegador ficam em `tests/browser-tests.html`.
+
+## Diretório compartilhado de trabalho
+
+O diretório canônico deste projeto é `Z:\Projetos\View and Convert`, compartilhado entre os dois PCs. Todas as mudanças devem ser aplicadas diretamente nessa pasta, sem criar ou modificar cópias paralelas.
+
+O caminho de rede correspondente é `\\192.168.15.73\Users\guizl_rede\compartilhamento\Projetos\View and Convert`.
+
+Antes de alterar arquivos, confirme que o workspace aponta para esse compartilhamento. Se a unidade `Z:` não estiver disponível, verifique o acesso pelo caminho de rede e informe explicitamente qualquer impossibilidade de acesso. Não presuma que um checkout em outro local esteja sincronizado com a pasta compartilhada ou que um commit local tenha sido transferido para ela.
