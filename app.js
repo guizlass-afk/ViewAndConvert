@@ -1,4 +1,4 @@
-import {createDrawingSheet} from './drawing-sheet.js?v=1';
+import {createDrawingSheet} from './drawing-sheet.js?v=2';
 import {convertModel,cadOutputFormats} from './model-export.js?v=1';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';
@@ -300,7 +300,7 @@ ui.exportButton.addEventListener('click',exportModel);
 window.addEventListener('keydown',event=>{if(event.target.closest('input,select,textarea,#drawingPanel'))return;if(event.key==='Escape'){hideVertexPreview();state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.canvas.style.cursor='grab';ui.professionalModal.hidden=true;}if(event.key.toLowerCase()==='f'&&state.model)fitCamera();});
 
 const drawing=createDrawingSheet({getModel:()=>state.model,getName:()=>state.file?.name||'',onLayout:()=>requestAnimationFrame(()=>{
-  resize();if(!state.model)return;
+  resize();if(!state.model||!ui.viewport.clientWidth)return;
   const direction=camera.position.clone().sub(controls.target).normalize(),center=state.bounds.getCenter(new THREE.Vector3()),radius=Math.max(state.bounds.getSize(new THREE.Vector3()).length()*.5,1);
   const halfFov=Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov*.5))*Math.min(1,camera.aspect)),distance=radius/Math.sin(halfFov)*1.15;
   camera.position.copy(center).addScaledVector(direction,distance);camera.near=Math.max(distance/10000,.001);camera.far=distance*100;camera.updateProjectionMatrix();controls.target.copy(center);controls.update();

@@ -115,7 +115,7 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
     }catch(error){if(error.name!=='AbortError')hint(`Não foi possível projetar: ${error.message}`);}
     finally{if(job===controller){job=null;$('addDrawingView').disabled=false;}}
   });
-  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));$('toggleDrawing').textContent=value?'→ Recolher folha 2D':'← Gerar folha 2D';if(value)render();onLayout();}
+  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));$('toggleDrawing').textContent=value?'← Voltar ao 3D':'← Gerar folha 2D';if(value)render();onLayout();}
   $('toggleDrawing').addEventListener('click',()=>open(panel.hidden));$('closeDrawing').addEventListener('click',()=>{open(false);$('toggleDrawing').focus();});
   const filename=()=>`${(getName()||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_')}_folha_A4`;
   $('downloadDrawing').textContent='Baixar PDF';$('printDrawing').textContent='Baixar DWG';
