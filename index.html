@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
   <title>View & Convert — Visualizador 3D</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -52,6 +52,8 @@
       <section id="measurePanel" class="panel" hidden>
         <div class="section-heading"><span>3</span><div><h2>Medições</h2><p>Selecione dois pontos sobre o modelo</p></div></div>
         <button id="measureButton" class="tool-button" type="button"><span>⌁</span><div><strong>Medir distância</strong><small>Clique em dois pontos</small></div></button>
+        <label class="field measure-target"><span>Selecionar</span><select id="measureTarget"><option value="vertex">Vértices da malha</option><option value="surface">Pontos na superfície</option></select></label>
+        <p class="measurement-help">Aproxime o cursor de um vértice e clique no destaque. X, Y e Z mostram as distâncias absolutas nos eixos do modelo.</p>
         <div id="measureHint" class="tool-hint" hidden>Selecione o primeiro ponto</div>
         <div id="measurements" class="measurement-list"><p>Nenhuma medição criada.</p></div>
         <button id="clearMeasurements" class="text-button" type="button" disabled>Limpar medições</button>
@@ -107,6 +109,7 @@
           <span class="spinner"></span><strong id="loadingTitle">Lendo o modelo…</strong><p id="loadingDetail">Preparando a geometria para visualização</p>
           <div class="progress"><i id="progressBar"></i></div><small id="progressValue">0%</small>
         </div>
+        <div id="vertexPreview" class="vertex-preview" hidden aria-hidden="true"></div>
         <div id="toast" class="toast" hidden></div>
         <div class="axis-cube" aria-hidden="true"><b>Z</b><span><i>Y</i><em>X</em></span></div>
         <div id="modelBadge" class="model-badge" hidden><i></i><span id="badgeName">—</span></div>
@@ -151,6 +154,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=3"></script>
 </body>
 </html>

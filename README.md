@@ -9,7 +9,7 @@ Aplicação publicada: https://guizlass-afk.github.io/ViewAndConvert/
 - visualização de STL, OBJ, 3MF, GLB/GLTF, STEP, IGES e BREP;
 - navegação orbital e vistas frontal, superior, lateral e isométrica;
 - modos sombreado, arestas, aramado e transparente;
-- medição entre dois pontos sobre a geometria;
+- medição entre vértices da malha ou pontos na superfície, com distância linear e componentes absolutas X, Y e Z;
 - corte de seção nos eixos X, Y e Z;
 - dimensões gerais, área, volume aproximado, vértices e triângulos;
 - árvore de componentes com controle de visibilidade;
@@ -41,3 +41,9 @@ O diretório canônico deste projeto é `Z:\Projetos\View and Convert`, comparti
 O caminho de rede correspondente é `\\192.168.15.73\Users\guizl_rede\compartilhamento\Projetos\View and Convert`.
 
 Antes de alterar arquivos, confirme que o workspace aponta para esse compartilhamento. Se a unidade `Z:` não estiver disponível, verifique o acesso pelo caminho de rede e informe explicitamente qualquer impossibilidade de acesso. Não presuma que um checkout em outro local esteja sincronizado com a pasta compartilhada ou que um commit local tenha sido transferido para ela.
+
+### Medições
+
+Ative **Medir distância** e escolha **Vértices da malha** ou **Pontos na superfície**. No modo de vértices, aproxime o cursor até aparecer o destaque e clique para escolher cada extremidade. As componentes X, Y e Z seguem os eixos do modelo, independentemente da vista da câmera. Em arquivos CAD, os vértices disponíveis pertencem à malha gerada na importação. Alterar a unidade do arquivo limpa as medições; alterar a unidade de exibição apenas converte os valores.
+
+Teste de regressão (Python, Playwright e Chrome instalados): `python tests/test_measurement.py`.

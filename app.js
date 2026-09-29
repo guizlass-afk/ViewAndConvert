@@ -13,7 +13,7 @@ const ui={
   fileInput:$('fileInput'),centerFileInput:$('centerFileInput'),dropZone:$('dropZone'),openAnother:$('openAnother'),emptyState:$('emptyState'),viewport:$('viewport'),canvas:$('canvas'),
   loading:$('loading'),loadingTitle:$('loadingTitle'),loadingDetail:$('loadingDetail'),progressBar:$('progressBar'),progressValue:$('progressValue'),toast:$('toast'),
   modelPanel:$('modelPanel'),measurePanel:$('measurePanel'),sectionPanel:$('sectionPanel'),convertPanel:$('convertPanel'),fileName:$('fileName'),fileFormat:$('fileFormat'),fileSize:$('fileSize'),meshCount:$('meshCount'),triangleCount:$('triangleCount'),dimensions:$('dimensions'),dimensionsUnit:$('dimensionsUnit'),modelUnit:$('modelUnit'),displayUnit:$('displayUnit'),
-  measureButton:$('measureButton'),measureHint:$('measureHint'),measurements:$('measurements'),clearMeasurements:$('clearMeasurements'),sectionEnabled:$('sectionEnabled'),sectionSlider:$('sectionSlider'),sectionValue:$('sectionValue'),sectionReverse:$('sectionReverse'),
+  measureButton:$('measureButton'),measureTarget:$('measureTarget'),vertexPreview:$('vertexPreview'),measureHint:$('measureHint'),measurements:$('measurements'),clearMeasurements:$('clearMeasurements'),sectionEnabled:$('sectionEnabled'),sectionSlider:$('sectionSlider'),sectionValue:$('sectionValue'),sectionReverse:$('sectionReverse'),
   exportFormat:$('exportFormat'),exportButton:$('exportButton'),fitView:$('fitView'),resetView:$('resetView'),statusText:$('statusText'),cursorPosition:$('cursorPosition'),renderInfo:$('renderInfo'),modelBadge:$('modelBadge'),badgeName:$('badgeName'),modelTree:$('modelTree'),toggleAll:$('toggleAll'),
   surfaceArea:$('surfaceArea'),volume:$('volume'),vertexCount:$('vertexCount'),bounds:$('bounds'),professionalModal:$('professionalModal'),modalText:$('modalText'),closeModal:$('closeModal'),modalOk:$('modalOk')
 };
@@ -118,7 +118,7 @@ async function loadFile(file){
   }catch(error){clearModel();ui.loading.hidden=true;toast(`Não foi possível abrir o arquivo: ${error.message}`,'error');console.error(error);}
 }
 
-function applyModelScale(){if(!state.model)return;const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
+function applyModelScale(){if(!state.model)return;clearMeasurements();const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
 function finishLoad(){
   ui.emptyState.hidden=true;ui.openAnother.hidden=false;[ui.modelPanel,ui.measurePanel,ui.sectionPanel,ui.convertPanel].forEach(panel=>panel.hidden=false);
   document.querySelectorAll('.viewer-toolbar button').forEach(button=>button.disabled=false);ui.toggleAll.disabled=false;
@@ -162,22 +162,67 @@ function updateSectionPlane(){
 }
 
 function pointerIntersection(event){
-  const rect=ui.canvas.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(state.meshes.filter(mesh=>mesh.visible),false)[0]||null;
+  const rect=ui.canvas.getBoundingClientRect();pointer.x=((event.clientX-rect.left)/rect.width)*2-1;pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(state.meshes.filter(mesh=>mesh.visible),false).find(hit=>!ui.sectionEnabled.checked||state.sectionPlane.distanceToPoint(hit.point)>=-1e-7)||null;
 }
-function marker(point,color=0xff6b2c){const radius=Math.max(state.bounds.getSize(new THREE.Vector3()).length*.006,.2);const sphere=new THREE.Mesh(new THREE.SphereGeometry(radius,18,12),new THREE.MeshBasicMaterial({color,depthTest:false}));sphere.position.copy(point);sphere.renderOrder=20;return sphere;}
+// Snap in screen pixels so the selection tolerance stays usable at any zoom.
+function measurePoint(event){
+  if(ui.measureTarget.value==='surface')return pointerIntersection(event)?.point||null;
+  const rect=ui.canvas.getBoundingClientRect(),world=new THREE.Vector3(),projected=new THREE.Vector3(),candidates=[];
+  state.model.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  for(const mesh of state.meshes){
+    if(!mesh.visible)continue;
+    const positions=mesh.geometry.attributes.position;
+    for(let i=0;i<positions.count;i++){
+      world.fromBufferAttribute(positions,i).applyMatrix4(mesh.matrixWorld);
+      if(ui.sectionEnabled.checked&&state.sectionPlane.distanceToPoint(world)<-1e-7)continue;
+      projected.copy(world).project(camera);
+      if(projected.z<-1||projected.z>1)continue;
+      const x=rect.left+(projected.x+1)*rect.width/2,y=rect.top+(1-projected.y)*rect.height/2;
+      const distance=Math.hypot(x-event.clientX,y-event.clientY);
+      if(distance<=12)candidates.push({point:world.clone(),distance});
+    }
+  }
+  candidates.sort((a,b)=>a.distance-b.distance);
+  const tolerance=Math.max(state.bounds.getSize(new THREE.Vector3()).length()*1e-5,1e-7);
+  for(const candidate of candidates){
+    projected.copy(candidate.point).project(camera);
+    raycaster.setFromCamera(new THREE.Vector2(projected.x,projected.y),camera);
+    const hit=raycaster.intersectObjects(state.meshes.filter(mesh=>mesh.visible),false).find(item=>!ui.sectionEnabled.checked||state.sectionPlane.distanceToPoint(item.point)>=-1e-7);
+    if(!hit||hit.distance+tolerance>=camera.position.distanceTo(candidate.point))return candidate.point;
+  }
+  return null;
+}
+function hideVertexPreview(){ui.vertexPreview.hidden=true;}
+function previewVertex(point){
+  if(!point||!state.measureMode||ui.measureTarget.value!=='vertex'){hideVertexPreview();return;}
+  const projected=point.clone().project(camera),rect=ui.canvas.getBoundingClientRect();
+  ui.vertexPreview.style.left=`${(projected.x+1)*rect.width/2}px`;
+  ui.vertexPreview.style.top=`${(1-projected.y)*rect.height/2}px`;
+  ui.vertexPreview.hidden=false;
+}
+controls.addEventListener('change',hideVertexPreview);
+function marker(point,color=0xff6b2c){const radius=Math.max(state.bounds.getSize(new THREE.Vector3()).length()*.006,.02);const sphere=new THREE.Mesh(new THREE.SphereGeometry(radius,18,12),new THREE.MeshBasicMaterial({color,depthTest:false}));sphere.position.copy(point);sphere.renderOrder=20;return sphere;}
 let pointerStart=null;
-ui.canvas.addEventListener('pointerdown',event=>{pointerStart={x:event.clientX,y:event.clientY};});
-ui.canvas.addEventListener('pointerup',event=>{if(!state.measureMode||!state.model||!pointerStart||Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y)>4)return;const hit=pointerIntersection(event);if(!hit){toast('Clique diretamente sobre uma face do modelo.','error');return;}selectMeasurePoint(hit.point);});
-let cursorFrame=0;ui.canvas.addEventListener('pointermove',event=>{if(!state.model||cursorFrame)return;cursorFrame=requestAnimationFrame(()=>{cursorFrame=0;const hit=pointerIntersection(event);if(hit)ui.cursorPosition.textContent=`X ${locale(hit.point.x)} · Y ${locale(hit.point.y)} · Z ${locale(hit.point.z)}`;});});
+ui.canvas.addEventListener('pointerdown',event=>{pointerStart=event.button===0?{x:event.clientX,y:event.clientY}:null;});
+ui.canvas.addEventListener('pointercancel',()=>{pointerStart=null;hideVertexPreview();});
+ui.canvas.addEventListener('pointerleave',hideVertexPreview);
+ui.canvas.addEventListener('pointerup',event=>{
+  const start=pointerStart;pointerStart=null;
+  if(event.button!==0||!state.measureMode||!state.model||!start||Math.hypot(event.clientX-start.x,event.clientY-start.y)>4)return;
+  const point=measurePoint(event);
+  if(!point){toast(ui.measureTarget.value==='vertex'?'Aproxime o cursor de um vértice visível até aparecer o destaque.':'Clique diretamente sobre uma face do modelo.','error');return;}
+  selectMeasurePoint(point);
+});
+let cursorFrame=0;ui.canvas.addEventListener('pointermove',event=>{if(!state.model||cursorFrame)return;cursorFrame=requestAnimationFrame(()=>{cursorFrame=0;if(!state.model)return;const point=state.measureMode?measurePoint(event):pointerIntersection(event)?.point;previewVertex(point);if(point)ui.cursorPosition.textContent=`X ${formatLength(point.x)} · Y ${formatLength(point.y)} · Z ${formatLength(point.z)}`;});});
 function selectMeasurePoint(point){
   if(!state.pendingPoint){state.pendingPoint=point.clone();const first=marker(point);first.userData.pending=true;measurementRoot.add(first);ui.measureHint.textContent='Agora selecione o segundo ponto';return;}
   const start=state.pendingPoint.clone(),end=point.clone(),distance=start.distanceTo(end),group=new THREE.Group(),lineGeometry=new THREE.BufferGeometry().setFromPoints([start,end]),line=new THREE.Line(lineGeometry,new THREE.LineBasicMaterial({color:0xff6b2c,depthTest:false}));line.renderOrder=19;group.add(marker(start),marker(end),line);measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});measurementRoot.add(group);state.measurements.push({id:++state.measureIndex,start,end,distance,group});state.pendingPoint=null;ui.measureHint.textContent='Selecione o primeiro ponto';renderMeasurementList();
 }
 function renderMeasurementList(){
-  ui.measurements.innerHTML='';if(!state.measurements.length){ui.measurements.innerHTML='<p>Nenhuma medição criada.</p>';ui.clearMeasurements.disabled=true;return;}ui.clearMeasurements.disabled=false;state.measurements.forEach(item=>{const row=document.createElement('div');row.className='measurement-item';row.innerHTML=`<span>${item.id}</span><div><small>Distância entre pontos</small><strong>${formatLength(item.distance,3)}</strong></div><button type="button" aria-label="Remover medição">×</button>`;row.querySelector('button').addEventListener('click',()=>removeMeasurement(item.id));ui.measurements.append(row);});
+  ui.measurements.innerHTML='';if(!state.measurements.length){ui.measurements.innerHTML='<p>Nenhuma medição criada.</p>';ui.clearMeasurements.disabled=true;return;}ui.clearMeasurements.disabled=false;state.measurements.forEach(item=>{const row=document.createElement('div');row.className='measurement-item';row.innerHTML=`<span>${item.id}</span><div><small>Distância linear</small><strong>${formatLength(item.distance,3)}</strong><dl class="measurement-components">${['x','y','z'].map(axis=>`<div><dt>${axis.toUpperCase()}</dt><dd>${formatLength(Math.abs(item.end[axis]-item.start[axis]),3)}</dd></div>`).join('')}</dl></div><button type="button" aria-label="Remover medição">×</button>`;row.querySelector('button').addEventListener('click',()=>removeMeasurement(item.id));ui.measurements.append(row);});
 }
 function removeMeasurement(id){const index=state.measurements.findIndex(item=>item.id===id);if(index<0)return;const [item]=state.measurements.splice(index,1);measurementRoot.remove(item.group);disposeObject(item.group);renderMeasurementList();}
-function clearMeasurements(){state.measurements.forEach(item=>disposeObject(item.group));measurementRoot.clear();state.measurements=[];state.pendingPoint=null;renderMeasurementList();}
+function clearMeasurements(){hideVertexPreview();measurementRoot.children.forEach(disposeObject);measurementRoot.clear();state.measurements=[];state.pendingPoint=null;ui.measureHint.textContent='Selecione o primeiro ponto';renderMeasurementList();}
 
 function safeName(){return(state.file?.name||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_');}
 function download(data,name,type){const blob=data instanceof Blob?data:new Blob([data],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -197,14 +242,15 @@ ui.fitView.addEventListener('click',()=>fitCamera());ui.resetView.addEventListen
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>fitCamera(button.dataset.view)));
 document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>applyDisplayMode(button.dataset.mode)));
 ui.modelUnit.addEventListener('change',applyModelScale);ui.displayUnit.addEventListener('change',refreshAnalysis);
-ui.measureButton.addEventListener('click',()=>{state.measureMode=!state.measureMode;ui.measureButton.classList.toggle('active',state.measureMode);ui.measureHint.hidden=!state.measureMode;ui.measureHint.textContent=state.pendingPoint?'Agora selecione o segundo ponto':'Selecione o primeiro ponto';ui.canvas.style.cursor=state.measureMode?'crosshair':'grab';});
+ui.measureTarget.addEventListener('change',()=>{hideVertexPreview();state.pendingPoint=null;measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});ui.measureHint.textContent='Selecione o primeiro ponto';});
+ui.measureButton.addEventListener('click',()=>{hideVertexPreview();state.measureMode=!state.measureMode;ui.measureButton.classList.toggle('active',state.measureMode);ui.measureHint.hidden=!state.measureMode;ui.measureHint.textContent=state.pendingPoint?'Agora selecione o segundo ponto':'Selecione o primeiro ponto';ui.canvas.style.cursor=state.measureMode?'crosshair':'grab';});
 ui.clearMeasurements.addEventListener('click',clearMeasurements);
 ui.sectionEnabled.addEventListener('change',updateSectionPlane);ui.sectionSlider.addEventListener('input',updateSectionPlane);ui.sectionReverse.addEventListener('change',updateSectionPlane);
 document.querySelectorAll('[data-axis]').forEach(button=>button.addEventListener('click',()=>{state.sectionAxis=button.dataset.axis;document.querySelectorAll('[data-axis]').forEach(item=>item.classList.toggle('active',item===button));updateSectionPlane();}));
 ui.toggleAll.addEventListener('click',()=>{state.allVisible=!state.allVisible;state.meshes.forEach(mesh=>mesh.visible=state.allVisible);ui.modelTree.querySelectorAll('input').forEach(input=>input.checked=state.allVisible);});
 ui.exportButton.addEventListener('click',exportModel);
 [ui.closeModal,ui.modalOk].forEach(button=>button.addEventListener('click',()=>ui.professionalModal.hidden=true));ui.professionalModal.addEventListener('click',event=>{if(event.target===ui.professionalModal)ui.professionalModal.hidden=true;});
-window.addEventListener('keydown',event=>{if(event.key==='Escape'){state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.canvas.style.cursor='grab';ui.professionalModal.hidden=true;}if(event.key.toLowerCase()==='f'&&state.model)fitCamera();});
+window.addEventListener('keydown',event=>{if(event.key==='Escape'){hideVertexPreview();state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.canvas.style.cursor='grab';ui.professionalModal.hidden=true;}if(event.key.toLowerCase()==='f'&&state.model)fitCamera();});
 
 ui.canvas.style.cursor='grab';updateSectionPlane();
 window.ViewConvertCore=Object.freeze({supportedFormats:[...supportedFormats],extensionOf,formatLength,calculateMetrics,loadFile});
