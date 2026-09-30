@@ -96,3 +96,12 @@ Os catálogos locais ficam em `locales/messages.json`; `i18n.js` atualiza rótul
 A folha e os downloads usam o idioma selecionado. O PDF mantém linhas e textos latinos vetoriais; textos dos demais alfabetos são desenhados pelo navegador e incorporados como imagens transparentes de aproximadamente 300 dpi para preservar os caracteres e a composição. O DWG R2000 usa escapes Unicode nos caracteres fora de Latin-1; a exibição depende das fontes disponíveis no programa CAD.
 
 Validação: `python tests/test_i18n.py` verifica paridade dos 12 catálogos, parâmetros, teclado, troca com folha aberta, preservação dos dados, RTL, ajuste de tela, preferência salva e PDF/DWG com caracteres japoneses.
+
+
+## Aparência
+
+O botão de sol/lua ao lado do idioma alterna os temas claro e escuro. A preferência fica salva em `factorytoolbox-theme`, compartilhada entre as ferramentas no mesmo domínio. Sem escolha salva, o tema acompanha a preferência do sistema. Alterar o tema mantém o projeto e os resultados atuais. A impressão e os arquivos exportados preservam as cores do desenho.
+
+## Licenciamento do código próprio
+
+O código original desta versão tem todos os direitos reservados, conforme `LICENSE`. Esta versão do código próprio não é distribuída sob a licença MIT. As licenças e os avisos de componentes de terceiros são preservados.

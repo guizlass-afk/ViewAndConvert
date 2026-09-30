@@ -47,6 +47,15 @@ const fillLight=new THREE.DirectionalLight(0xbad7e7,1.35);fillLight.position.set
 const modelRoot=new THREE.Group();modelRoot.name=t("Modelo");scene.add(modelRoot);
 const measurementRoot=new THREE.Group();measurementRoot.name=t("Medições");scene.add(measurementRoot);
 const grid=new THREE.GridHelper(1000,20,0xb6c7cb,0xd5e0e2);grid.rotation.x=Math.PI/2;grid.position.z=-.5;grid.material.opacity=.5;grid.material.transparent=true;scene.add(grid);
+const lightGridColors=grid.geometry.attributes.color.array.slice();
+function applyViewerTheme(){
+ const dark=document.documentElement.dataset.theme==='dark';scene.background.set(dark?0x111f2a:0xeff4f5);
+ const colors=grid.geometry.attributes.color,color=new THREE.Color(0x526d80);
+ if(dark){for(let i=0;i<colors.count;i++)colors.setXYZ(i,color.r,color.g,color.b);}else colors.array.set(lightGridColors);
+ colors.needsUpdate=true;grid.material.opacity=dark?.65:.5;
+}
+document.addEventListener('themechange',applyViewerTheme);applyViewerTheme();
+
 // Project the model axes with the camera rotation, but anchor them in the corner.
 const orientationAxes=$('orientationAxes');
 const svgNamespace='http://www.w3.org/2000/svg';

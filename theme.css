@@ -1,0 +1,101 @@
+/* Theme controls and palette, shared across the Factory Toolbox projects. */
+:root{color-scheme:light}
+.theme-toggle{--theme-travel:28px;position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:space-around;flex:0 0 auto;direction:ltr;width:62px;height:36px;padding:3px;border:1px solid #cbd9df;border-radius:20px;background:#e9f0f3;color:#738791;cursor:pointer;vertical-align:middle}
+.theme-toggle .theme-thumb{position:absolute;z-index:-1;top:4px;left:4px;width:26px;height:26px;background:#fff;border-radius:50%;box-shadow:0 1px 4px #172f3d22;transition:transform .2s ease,background .2s ease;pointer-events:none}
+.theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.theme-toggle .theme-sun{color:#b77b19}.theme-toggle:focus-visible{outline:3px solid #e49b58;outline-offset:3px}.theme-toggle:hover{border-color:#0b9a90}
+@media screen{
+ html[data-theme=dark]{color-scheme:dark;--ink:#e0ebf1;--muted:#a4bac7;--line:#324957;--surface:#192b37;--panel:#192b37;--bg:#101c26;--canvas:#111f2a;--teal:#42c4b8;--teal-dark:#6ad8cb;--teal-soft:#173b3b;--orange:#ff9a63;--orange-dark:#e48852;--blue:#83b6e2;--danger:#ff9a91;--shadow:0 8px 24px #0004}
+ html[data-theme=dark] .theme-toggle{background:#1c3545;border-color:#3b5b6c;color:#819aa9}
+ html[data-theme=dark] .theme-toggle .theme-thumb{transform:translateX(var(--theme-travel));background:#355c71;box-shadow:none}
+ html[data-theme=dark] .theme-toggle .theme-sun{color:#819aa9}html[data-theme=dark] .theme-toggle .theme-moon{color:#a5e7ef}
+}
+@media(max-width:760px){.theme-toggle{--theme-travel:20px;width:48px;height:30px;padding:2px}.theme-toggle .theme-thumb{top:3px;left:3px;width:22px;height:22px}.theme-toggle svg{width:16px;height:16px}}
+@media(prefers-reduced-motion:reduce){.theme-toggle .theme-thumb{transition:none}}
+@media print{.theme-toggle{display:none!important}}
+
+/* Screen-only overrides: paper, result geometry and printed output retain their colors. */
+@media screen{
+html[data-theme=dark] body{background-color:#193c3b}
+html[data-theme=dark] .topbar{background-color:#192b37}
+html[data-theme=dark] .brand-mark i{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360}
+html[data-theme=dark] .sidebar{background-color:#193c3b}
+html[data-theme=dark] .drop-zone{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#193c3b}
+html[data-theme=dark] .format-row span{color:#a9bfcc;background-color:#152530}
+html[data-theme=dark] .secondary{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .model-stats div{background-color:#152530}
+html[data-theme=dark] .dimensions{border-bottom-color:#375360}
+html[data-theme=dark] .field > span{color:#a9bfcc}
+html[data-theme=dark] .field select{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .tool-button{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .tool-button.active{background-color:#193c3b}
+html[data-theme=dark] .tool-hint{background-color:#3d3025;color:#eb9e7a}
+html[data-theme=dark] .measurement-item{border-bottom-color:#375360}
+html[data-theme=dark] .measurement-item > span{background-color:#3d3025}
+html[data-theme=dark] .measurement-item button{color:#a9bfcc}
+html[data-theme=dark] .text-button:disabled{color:#a9bfcc}
+html[data-theme=dark] .switch-row{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .axis-buttons button{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .viewer-toolbar{background-color:#192b37}
+html[data-theme=dark] .tool-group{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .tool-group button{border-right-color:#375360;background-color:#192b37}
+html[data-theme=dark] .tool-group button:disabled{color:#a9bfcc}
+html[data-theme=dark] .viewport{background-color:#152530;background-image:radial-gradient(#152530 0.7px, transparent 0.7px)}
+html[data-theme=dark] .empty-graphic i{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:rgba(25,43,55,0.72)}
+html[data-theme=dark] .empty-state small{color:#a9bfcc}
+html[data-theme=dark] .loading{background-color:rgba(25,60,59,0.94)}
+html[data-theme=dark] .spinner{border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360}
+html[data-theme=dark] .progress{background-color:#152530}
+html[data-theme=dark] .model-badge{background-color:rgba(25,43,55,0.9)}
+html[data-theme=dark] .viewer-footer{background-color:#192b37}
+html[data-theme=dark] .panel-title{border-bottom-color:#375360}
+html[data-theme=dark] .panel-title button{background-color:#152530}
+html[data-theme=dark] .tree-empty{color:#a9bfcc}
+html[data-theme=dark] .tree-empty span{color:#a9bfcc}
+html[data-theme=dark] .tree-node:hover{background-color:#152530}
+html[data-theme=dark] .tree-node b{color:#a9bfcc}
+html[data-theme=dark] .property-list div{border-bottom-color:#375360}
+html[data-theme=dark] .support-list li{border-bottom-color:#375360}
+html[data-theme=dark] .modal-card{background-color:#192b37}
+html[data-theme=dark] .modal-close{color:#a9bfcc}
+html[data-theme=dark] .modal-icon{background-color:#3d3025}
+html[data-theme=dark] .modal-formats span{color:#a9bfcc}
+html[data-theme=dark] .vertex-preview{background-color:rgba(25,43,55,0.533)}
+html[data-theme=dark] .drawing-toggle{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360}
+html[data-theme=dark] .drawing-panel{background-color:#152530}
+html[data-theme=dark] .drawing-heading{background-color:#192b37}
+html[data-theme=dark] .drawing-controls,html[data-theme=dark] .drawing-tools,html[data-theme=dark] .drawing-options{background-color:#193c3b}
+html[data-theme=dark] .drawing-panel select,html[data-theme=dark] .drawing-panel input{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .drawing-panel button{border-top-color:#375360;border-right-color:#375360;border-bottom-color:#375360;border-left-color:#375360;background-color:#192b37}
+html[data-theme=dark] .drawing-hint{background-color:#193c3b;border-bottom-color:#375360}
+html[data-theme=dark] .drawing-footer{background-color:#193c3b}
+html[data-theme=dark] .drawing-sidebar{background-color:#193c3b}
+html[data-theme=dark] .language-trigger{background-color:#192b37}
+html[data-theme=dark] .language-menu{background-color:#192b37}
+html[data-theme=dark] .language-menu button{background-color:#192b37}
+html[data-theme=dark] .language-menu button:hover,html[data-theme=dark] .language-menu button:focus-visible,html[data-theme=dark] .language-menu [aria-selected="true"]{background-color:#193c3b;color:#79eaec}
+html[data-theme=dark] body{background:#101c26;color:#e0ebf1}
+html[data-theme=dark] .primary-button,html[data-theme=dark] .primary,html[data-theme=dark] .drawing-tools button[aria-pressed=true],html[data-theme=dark] .axis-buttons button.active{background:#197c76;color:#fff}
+html[data-theme=dark] .primary-button:hover,html[data-theme=dark] .primary:hover{background:#226e69}
+html[data-theme=dark] .language-menu button[aria-selected=true]{background:#226e69;color:#fff}
+html[data-theme=dark] .brand-mark,html[data-theme=dark] .section-heading>span,html[data-theme=dark] .empty-state>b{background:#244553;color:#fff}
+html[data-theme=dark] .loading{background:rgba(17,31,42,.96)}
+html[data-theme=dark] .orientation-axes text{stroke:#111f2a}
+html[data-theme=dark] .drawing-paper-wrap>svg{background:#fff;color:#172e3a;color-scheme:light}
+html[data-theme=dark] .empty-graphic i,html[data-theme=dark] .empty-graphic span{background:rgba(33,60,72,.75)}
+
+}
+
+@media(max-width:760px){.header-actions,.topbar-actions,.top-actions{gap:8px}}
+@media(max-width:760px){.topbar{padding-inline:10px;gap:6px}.brand{gap:6px}.brand-mark{width:32px;height:32px}.brand-name{font-size:17px}.drawing-toggle{max-width:80px;padding:5px;font-size:9px}.language-trigger{padding:5px;gap:4px}.language-trigger i{display:none}}
+@media(max-width:370px){.topbar{padding-inline:8px;gap:5px}.brand-name{font-size:14px}.brand-mark{width:26px;height:30px}.drawing-toggle{max-width:64px}.theme-toggle{width:44px;--theme-travel:16px}}
+
+@media screen{
+ html[data-theme=dark] .sidebar{background:#13232e}
+ html[data-theme=dark] .workspace{background:#101c26}
+ html[data-theme=dark] .drop-zone{background:#152d38}
+ html[data-theme=dark] .drop-zone:hover{background:#1b3d43}
+ html[data-theme=dark] .brand-mark i{border-color:#e9f3f6}
+ html[data-theme=dark] .canvas-wrap{background-color:#111f2a;background-image:radial-gradient(#304959 1px,transparent 1px)}
+}
+@media screen{html[data-theme=dark] .primary,html[data-theme=dark] .primary-button{background:#b65122;color:white}html[data-theme=dark] .primary:hover,html[data-theme=dark] .primary-button:hover:not(:disabled){background:#9f451c}}

@@ -16,7 +16,7 @@ server=ThreadingHTTPServer(('127.0.0.1',0),partial(Quiet,directory=str(ROOT)));T
 try:
  with TemporaryDirectory(prefix='viewconvert-drawing-') as folder,sync_playwright() as p:
   browser=p.chromium.launch(channel='chrome',headless=True)
-  page=browser.new_page(viewport={'width':1440,'height':1000});page.set_default_timeout(120000)
+  page=browser.new_page(viewport={'width':1440,'height':1000},color_scheme=os.environ.get('TEST_COLOR_SCHEME','light'));page.set_default_timeout(120000)
   errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
   page.goto(f'http://127.0.0.1:{server.server_port}/');page.wait_for_function('!!window.ViewConvertCore')
   regression=page.evaluate("""async()=>{
