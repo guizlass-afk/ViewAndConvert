@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Visualizador, medidor e conversor de modelos CAD e malhas 3D.">
   <title>View & Convert — Visualizador 3D</title>
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=10">
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
   </script>
@@ -19,6 +19,28 @@
     <div class="topbar-copy"><strong>Visualizador e conversor 3D</strong><span>Ferramentas para projetos mecânicos</span></div>
     <button id="toggleDrawing" class="drawing-toggle" type="button" aria-expanded="false" aria-controls="drawingPanel" disabled>← Gerar folha 2D</button>
     <div class="privacy"><i></i><span>Processamento local e seguro</span></div>
+      <div id="languagePicker" class="language-picker">
+        <button id="languageButton" class="language-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Idioma: Português">
+          <img id="currentFlag" src="flags/br.svg" alt=""><span id="currentLanguage">Português</span><i aria-hidden="true"></i>
+        </button>
+        <div id="languageMenu" class="language-menu" role="listbox" aria-label="Idioma" hidden>
+          <button type="button" role="option" data-language="pt-BR"><img src="flags/br.svg" alt="">Português</button>
+          <button type="button" role="option" data-language="en-US"><img src="flags/us.svg" alt="">English</button>
+          <button type="button" role="option" data-language="es-ES"><img src="flags/es.svg" alt="">Español</button>
+          <button type="button" role="option" data-language="zh-CN"><img src="flags/cn.svg" alt="">中文</button>
+          <button type="button" role="option" data-language="hi-IN"><img src="flags/in.svg" alt="">हिन्दी</button>
+          <button type="button" role="option" data-language="ar-SA"><img src="flags/sa.svg" alt="">العربية</button>
+          <button type="button" role="option" data-language="fr-FR"><img src="flags/fr.svg" alt="">Français</button>
+          <button type="button" role="option" data-language="bn-BD"><img src="flags/bd.svg" alt="">বাংলা</button>
+          <button type="button" role="option" data-language="ru-RU"><img src="flags/ru.svg" alt="">Русский</button>
+          <button type="button" role="option" data-language="de-DE"><img src="flags/de.svg" alt="">Deutsch</button>
+          <button type="button" role="option" data-language="it-IT"><img src="flags/it.svg" alt="">Italiano</button>
+          <button type="button" role="option" data-language="ja-JP"><img src="flags/jp.svg" alt="">日本語</button>
+        </div>
+        <select id="languageSelect" class="language-native-select" aria-label="Idioma" tabindex="-1">
+          <option value="pt-BR">Português</option><option value="en-US">English</option><option value="es-ES">Español</option><option value="zh-CN">中文</option><option value="hi-IN">हिन्दी</option><option value="ar-SA">العربية</option><option value="fr-FR">Français</option><option value="bn-BD">বাংলা</option><option value="ru-RU">Русский</option><option value="de-DE">Deutsch</option><option value="it-IT">Italiano</option><option value="ja-JP">日本語</option>
+        </select>
+      </div>
   </header>
 
   <main class="app-shell">
@@ -186,6 +208,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=9"></script>
+  <script type="module" src="app.js?v=10"></script>
 </body>
 </html>

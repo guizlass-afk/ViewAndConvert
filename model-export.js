@@ -1,3 +1,4 @@
+import {t,getLanguage,bindText} from './i18n.js?v=1';
 import * as THREE from 'three';
 import {STLExporter} from 'three/addons/exporters/STLExporter.js';
 import {OBJExporter} from 'three/addons/exporters/OBJExporter.js';
@@ -20,7 +21,7 @@ function meshCoordinates(model){
     const count=index?index.count:position.count,vertices=new Float64Array(count*3),point=new THREE.Vector3();
     for(let i=0;i<count;i++){
       point.fromBufferAttribute(position,index?index.getX(i):i).applyMatrix4(mesh.matrixWorld);
-      if(!Number.isFinite(point.x)||!Number.isFinite(point.y)||!Number.isFinite(point.z))throw new Error('A geometria contém coordenadas inválidas.');
+      if(!Number.isFinite(point.x)||!Number.isFinite(point.y)||!Number.isFinite(point.z))throw new Error(t("A geometria contém coordenadas inválidas."));
       point.toArray(vertices,i*3);
     }
     meshes.push({name:mesh.name,vertices});
@@ -32,16 +33,16 @@ function cadExport(payload,signal,onProgress){
     const worker=new Worker(new URL('./cad-export-worker.js',import.meta.url),{type:'module'});
     let timer;
     const finish=(error,result)=>{clearTimeout(timer);worker.terminate();signal?.removeEventListener('abort',cancel);error?reject(error):resolve(result);};
-    const cancel=()=>finish(new DOMException('Conversão cancelada.','AbortError'));
+    const cancel=()=>finish(new DOMException(t("Conversão cancelada."),'AbortError'));
     signal?.addEventListener('abort',cancel,{once:true});
     if(signal?.aborted){cancel();return;}
-    timer=setTimeout(()=>finish(new Error('A conversão excedeu 10 minutos. Tente uma geometria menor.')),600000);
+    timer=setTimeout(()=>finish(new Error(t("A conversão excedeu 10 minutos. Tente uma geometria menor."))),600000);
     worker.onmessage=({data})=>{
       if(data.type==='progress')onProgress(data.detail);
       if(data.type==='result')finish(null,data.buffer);
       if(data.type==='error')finish(new Error(data.message));
     };
-    worker.onerror=event=>finish(new Error(event.message||'Não foi possível carregar o motor CAD. Verifique sua conexão.'));
+    worker.onerror=event=>finish(new Error(event.message||t("Não foi possível carregar o motor CAD. Verifique sua conexão.")));
     const buffers=payload.source?[payload.source]:payload.meshes.map(mesh=>mesh.buffer);
     worker.postMessage(payload,buffers);
   });
@@ -53,7 +54,7 @@ function threeMf(model){
     const vertices=[],triangles=[];
     for(let j=0;j<mesh.vertices.length;j+=3)vertices.push(`<vertex x="${mesh.vertices[j]}" y="${mesh.vertices[j+1]}" z="${mesh.vertices[j+2]}"/>`);
     for(let j=0;j<mesh.vertices.length/3;j+=3)triangles.push(`<triangle v1="${j}" v2="${j+1}" v3="${j+2}"/>`);
-    return `<object id="${i+1}" type="model" name="${xml(mesh.name||`Corpo ${i+1}`)}"><mesh><vertices>${vertices.join('')}</vertices><triangles>${triangles.join('')}</triangles></mesh></object>`;
+    return `<object id="${i+1}" type="model" name="${xml(mesh.name||t("Corpo {0}",[i+1]))}"><mesh><vertices>${vertices.join('')}</vertices><triangles>${triangles.join('')}</triangles></mesh></object>`;
   });
   const modelXml=`<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="pt-BR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><resources>${objects.join('')}</resources><build>${meshes.map((_,i)=>`<item objectid="${i+1}"/>`).join('')}</build></model>`;
   return zipSync({
@@ -64,7 +65,7 @@ function threeMf(model){
 }
 
 export async function convertModel({model,file,extension,scale,format,signal,onProgress=()=>{}}){
-  if(!exportFormats.includes(format))throw new Error('Formato de saída não suportado.');
+  if(!exportFormats.includes(format))throw new Error(t("Formato de saída não suportado."));
   signal?.throwIfAborted();
   if(cadOutputFormats.has(format)){
     const payload={format,extension,scale};
@@ -73,7 +74,7 @@ export async function convertModel({model,file,extension,scale,format,signal,onP
     signal?.throwIfAborted();
     return new Blob([await cadExport(payload,signal,onProgress)],{type:'application/octet-stream'});
   }
-  onProgress(`Gerando ${format.toUpperCase()}…`);
+  onProgress(t("Gerando {0}…",[format.toUpperCase()]));
   if(format==='3mf')return new Blob([threeMf(model)],{type:'model/3mf'});
   // Snapshot prevents a new import, visibility toggles or view modes from changing the export.
   const snapshot=model.clone(true),helpers=[],materials=[];

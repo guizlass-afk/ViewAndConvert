@@ -78,10 +78,21 @@ Depois de abrir um modelo, clique em **Gerar folha 2D** no topo. O painel ocupa 
 - **PDF:** download vetorial de uma página A4 paisagem, com textos e cotas.
 - **DWG:** arquivo nativo AutoCAD R2000 (`AC1015`), com linhas e textos editáveis, validado também com um leitor LibreDWG independente. As cotas são representações gráficas, não entidades DIMENSION associativas. As coordenadas ficam em milímetros da folha, no espaço de modelo, já com a escala aplicada.
 
-As vistas incluem o modelo completo, mesmo corpos ocultos, sem aplicar o corte visual. As projeções usam as arestas e os contornos da malha importada, preservando as divis?es entre faces CAD e recortando continuamente os trechos ocultos contra os tri?ngulos; curvas ficam segmentadas e a precisão depende da tesselação. Não é uma extração exata das arestas BREP. Nas vistas ortogonais, cotas e ângulos são medidos no plano projetado; na isométrica, cotas alinhadas e ângulos usam os vértices 3D (horizontal/vertical continuam projetadas). O ângulo é o menor entre os dois segmentos, de 0 a 180 graus.
+As vistas incluem o modelo completo, mesmo corpos ocultos, sem aplicar o corte visual. As projeções usam as arestas e os contornos da malha importada, preservando as divisões entre faces CAD e recortando continuamente os trechos ocultos contra os triângulos; curvas ficam segmentadas e a precisão depende da tesselação. Não é uma extração exata das arestas BREP. Nas vistas ortogonais, cotas e ângulos são medidos no plano projetado; na isométrica, cotas alinhadas e ângulos usam os vértices 3D (horizontal/vertical continuam projetadas). O ângulo é o menor entre os dois segmentos, de 0 a 180 graus.
 
 A folha fica na sessão atual: fechar/reabrir o painel preserva o trabalho; carregar outro modelo, alterar a unidade do arquivo ou recarregar a página reinicia a folha. Baixe o PDF/DWG antes disso. A unidade das cotas da folha é independente da unidade exibida no painel 3D.
 
 Dependências carregadas sob demanda: [three-mesh-bvh 0.9.1](https://github.com/gkjohnson/three-mesh-bvh), [jsPDF 3.0.3](https://github.com/parallax/jsPDF) e [acad-ts 3.2.0](https://github.com/node-projects/acad-ts), todas com licença MIT. O processamento e a escrita dos arquivos ocorrem no navegador; os modelos não são enviados às CDNs.
 
 Validação: `python tests/test_drawing.py` (Python, Playwright, Chrome e pypdf). Cobre as sete vistas, cotas de 40 mm/90°, anotações, escala/unidades, arraste, exclusão/desfazer, zoom, reinicialização, PDF A4 e DWG reaberto com acad-ts e LibreDWG. Defina `DRAWING_TEST_ARTIFACTS` para preservar os arquivos e a captura de tela em uma pasta de revisão.
+
+
+## Idiomas
+
+O seletor com bandeiras segue o padrão do PipeSaver e do Best Section: português, inglês, espanhol, chinês, hindi, árabe, francês, bengali, russo, alemão, italiano e japonês. Português é o padrão; a preferência fica salva neste navegador. A troca é imediata, sem recarregar o modelo nem apagar medições, vistas ou cotas. Nomes importados e anotações manuais não são traduzidos.
+
+Os catálogos locais ficam em `locales/messages.json`; `i18n.js` atualiza rótulos, instruções, acessibilidade, mensagens e números. Nenhum conteúdo do usuário é enviado para tradução. O árabe usa leitura da direita para a esquerda, mantendo a orientação geométrica do desenho.
+
+A folha e os downloads usam o idioma selecionado. O PDF mantém linhas e textos latinos vetoriais; textos dos demais alfabetos são desenhados pelo navegador e incorporados como imagens transparentes de aproximadamente 300 dpi para preservar os caracteres e a composição. O DWG R2000 usa escapes Unicode nos caracteres fora de Latin-1; a exibição depende das fontes disponíveis no programa CAD.
+
+Validação: `python tests/test_i18n.py` verifica paridade dos 12 catálogos, parâmetros, teclado, troca com folha aberta, preservação dos dados, RTL, ajuste de tela, preferência salva e PDF/DWG com caracteres japoneses.

@@ -1,5 +1,6 @@
+import {t,getLanguage,bindText} from './i18n.js?v=1';
 import {prepareDrawingGeometry,projectDrawingView} from './drawing-projection.js?v=2';
-import {exportDrawingPdf,exportDrawingDwg} from './drawing-export.js?v=1';
+import {exportDrawingPdf,exportDrawingDwg} from './drawing-export.js?v=2';
 const NS='http://www.w3.org/2000/svg',factors={mm:1,cm:10,in:25.4,m:1000};
 const el=(tag,attrs={},text)=>{const node=document.createElementNS(NS,tag);for(const [k,v]of Object.entries(attrs))node.setAttribute(k,v);if(text!==undefined)node.textContent=text;return node;};
 const line=(x1,y1,x2,y2)=>({type:'line',x1,y1,x2,y2});
@@ -11,15 +12,15 @@ function arrows(output,a,b){const length=Math.hypot(b.x-a.x,b.y-a.y);if(!length)
 export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
   const $=id=>document.getElementById(id),sheet=$('drawingSheet'),panel=$('drawingPanel');
   let items=[],history=[],scale=1,unit='mm',tool='move',selection=null,picks=[],source=null,cache=new Map(),job=null,nextId=1,drag=null;
-  const num=v=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(v);
-  const length=v=>`${num(v/factors[unit])} ${unit==='in'?'pol':unit}`;
+  const num=v=>new Intl.NumberFormat(getLanguage(),{maximumFractionDigits:2}).format(v);
+  const length=v=>`${num(v/factors[unit])} ${unit==='in'?t("pol"):unit}`;
   const scaleText=()=>scale>=1?`${num(scale)}:1`:`1:${num(1/scale)}`;
   const snapshot=()=>({scale,items:items.map(v=>({...v,annotations:v.annotations.map(a=>({...a}))}))});
   function save(previous=snapshot()){history.push(previous);if(history.length>25)history.shift();}
-  function hint(message){$('drawingHint').textContent=message;}
+  function hint(message){bindText($('drawingHint'),()=>t(message));}
   function prompt(){
-    if(!items.length){hint('Escolha uma vista e clique em Inserir vista.');return;}
-    const messages={move:'Arraste as vistas ou as cotas para posicionar. Clique para selecionar e excluir.',linear:['Clique no primeiro vértice da vista.','Clique no segundo vértice da mesma vista.','Clique onde deseja posicionar a cota.'][picks.length],angle:['Clique na primeira extremidade do ângulo.','Clique no vértice central do ângulo.','Clique na segunda extremidade do ângulo.','Clique para posicionar o arco e o valor.'][picks.length],diameter:'Anotação manual: digite o valor, clique na geometria e depois na posição do texto.',radius:'Anotação manual: digite o valor, clique na geometria e depois na posição do texto.'};hint(messages[tool]);
+    if(!items.length){hint(t("Escolha uma vista e clique em Inserir vista."));return;}
+    const messages={move:t("Arraste as vistas ou as cotas para posicionar. Clique para selecionar e excluir."),linear:[t("Clique no primeiro vértice da vista."),t("Clique no segundo vértice da mesma vista."),t("Clique onde deseja posicionar a cota.")][picks.length],angle:[t("Clique na primeira extremidade do ângulo."),t("Clique no vértice central do ângulo."),t("Clique na segunda extremidade do ângulo."),t("Clique para posicionar o arco e o valor.")][picks.length],diameter:t("Anotação manual: digite o valor, clique na geometria e depois na posição do texto."),radius:t("Anotação manual: digite o valor, clique na geometria e depois na posição do texto.")};hint(messages[tool]);
   }
   function setTool(value){tool=value;picks=[];document.querySelectorAll('[data-drawing-tool]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.drawingTool===tool)));$('linearOptions').hidden=tool!=='linear';$('annotationOptions').hidden=!['radius','diameter'].includes(tool);render();prompt();}
   function annotationPrimitives(view,annotation){
@@ -38,9 +39,9 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
     return out;
   }
   function framePrimitives(){
-    const out=[line(10,10,287,10),line(287,10,287,200),line(287,200,10,200),line(10,200,10,10),line(10,185,287,185),line(206,185,206,200),text(14,191,(getName()||'Modelo').slice(0,52),3,'start'),text(14,196,'Vistas da malha • cotas em '+(unit==='in'?'pol':unit),2.3,'start'),text(211,191,`A4 | Escala ${scaleText()}`,2.7,'start'),text(211,196,'View & Convert',2.4,'start')];return out;
+    const out=[line(10,10,287,10),line(287,10,287,200),line(287,200,10,200),line(10,200,10,10),line(10,185,287,185),line(206,185,206,200),text(14,191,(getName()||t("Modelo")).slice(0,52),3,'start'),text(14,196,t('Vistas da malha • cotas em {0}',[unit==='in'?t('pol'):unit]),2.3,'start'),text(211,191,`A4 | ${t('Escala {0}',[scaleText()])}`,2.7,'start'),text(211,196,'View & Convert',2.4,'start')];return out;
   }
-  function primitives(){const out=framePrimitives();for(const view of items){const local=view.data.segments.map(s=>line(s[0]*scale,s[1]*scale,s[2]*scale,s[3]*scale));local.push(text(0,view.data.maxY*scale+5,view.data.name,2.7));for(const a of view.annotations)local.push(...annotationPrimitives(view,a));out.push(...local.map(p=>p.type==='line'?{...p,x1:p.x1+view.x,y1:p.y1+view.y,x2:p.x2+view.x,y2:p.y2+view.y}:{...p,x:p.x+view.x,y:p.y+view.y}));}return out;}
+  function primitives(){const out=framePrimitives();for(const view of items){const local=view.data.segments.map(s=>line(s[0]*scale,s[1]*scale,s[2]*scale,s[3]*scale));local.push(text(0,view.data.maxY*scale+5,t(view.data.name),2.7));for(const a of view.annotations)local.push(...annotationPrimitives(view,a));out.push(...local.map(p=>p.type==='line'?{...p,x1:p.x1+view.x,y1:p.y1+view.y,x2:p.x2+view.x,y2:p.y2+view.y}:{...p,x:p.x+view.x,y:p.y+view.y}));}return out;}
   function drawPrimitives(parent,list){
     const lines=list.filter(p=>p.type==='line');if(lines.length)parent.append(el('path',{d:lines.map(p=>`M${p.x1} ${p.y1}L${p.x2} ${p.y2}`).join(''),'fill':'none','stroke':'#172e3a','stroke-width':'.22'}));
     for(const p of list)if(p.type==='text')parent.append(el('text',{x:p.x,y:p.y,'font-family':'Arial, sans-serif','font-size':p.size,'text-anchor':p.align,'fill':'#172e3a','stroke':'white','stroke-width':'.6','paint-order':'stroke'},p.value));
@@ -51,7 +52,7 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
       const group=el('g',{'data-sheet-view':view.id,'data-kind':view.kind,transform:`translate(${view.x} ${view.y})`});const d=view.data;
       const box={x:Math.min(-8,d.minX*scale)-3,y:Math.min(-8,d.minY*scale)-3,width:Math.max(8,d.maxX*scale)-Math.min(-8,d.minX*scale)+6,height:Math.max(8,d.maxY*scale)-Math.min(-8,d.minY*scale)+12};
       group.append(el('rect',{...box,fill:'transparent',stroke:selection?.view===view.id?'#10958d':'none','stroke-width':'.3','stroke-dasharray':'1.5 1',class:'drawing-selection'}));
-      drawPrimitives(group,d.segments.map(s=>line(s[0]*scale,s[1]*scale,s[2]*scale,s[3]*scale)));drawPrimitives(group,[text(0,d.maxY*scale+5,d.name,2.7)]);
+      drawPrimitives(group,d.segments.map(s=>line(s[0]*scale,s[1]*scale,s[2]*scale,s[3]*scale)));drawPrimitives(group,[text(0,d.maxY*scale+5,t(d.name),2.7)]);
       for(const annotation of view.annotations){const child=el('g',{'data-sheet-annotation':annotation.id});drawPrimitives(child,annotationPrimitives(view,annotation));if(selection?.annotation===annotation.id)child.setAttribute('opacity','.6');group.append(child);}
       sheet.append(group);
     }
@@ -70,17 +71,17 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
       const annotationId=Number(event.target.closest('[data-sheet-annotation]')?.dataset.sheetAnnotation)||null;selection={view:view.id,annotation:annotationId};const annotation=view.annotations.find(a=>a.id===annotationId);
       drag={view,annotation,start:p,x:annotation?annotation.label.x:view.x,y:annotation?annotation.label.y:view.y,before:snapshot(),moved:false};sheet.setPointerCapture(event.pointerId);render();return;
     }
-    if(picks.length&&picks[0].view!==view.id){hint('Selecione os pontos na mesma vista. Escape cancela a cota em andamento.');return;}
+    if(picks.length&&picks[0].view!==view.id){hint(t("Selecione os pontos na mesma vista. Escape cancela a cota em andamento."));return;}
     const count=tool==='linear'?2:tool==='angle'?3:1;
     if(picks.length<count){
       const point=['linear','angle'].includes(tool)?snap(view,p):{x:(p.x-view.x)/scale,y:(p.y-view.y)/scale};
-      if(!point){hint('Aproxime o cursor de um vértice visível até aparecer o destaque.');return;}
-      if(picks.some(existing=>Math.hypot(point.x-existing.point.x,point.y-existing.point.y)<1e-8)){hint('Escolha um vértice diferente.');return;}
+      if(!point){hint(t("Aproxime o cursor de um vértice visível até aparecer o destaque."));return;}
+      if(picks.some(existing=>Math.hypot(point.x-existing.point.x,point.y-existing.point.y)<1e-8)){hint(t("Escolha um vértice diferente."));return;}
       picks.push({view:view.id,point});selection={view:view.id};render();prompt();return;
     }
     const points=picks.map(p=>p.point),direction=$('linearDirection').value;
     const value=tool==='linear'?linearValue(points[0],points[1],direction,view.kind==='iso'):tool==='angle'?angleValue(...points,view.kind==='iso'):$('drawingAnnotation').value.trim();
-    if((typeof value==='number'&&(!Number.isFinite(value)||value<1e-8))||!String(value).trim()){hint('Medida inválida. Para raio ou diâmetro, informe o valor manual. Escape reinicia a seleção.');return;}
+    if((typeof value==='number'&&(!Number.isFinite(value)||value<1e-8))||!String(value).trim()){hint(t("Medida inválida. Para raio ou diâmetro, informe o valor manual. Escape reinicia a seleção."));return;}
     save();const annotation={id:nextId++,kind:tool,points,value,direction,label:{x:(p.x-view.x)/scale,y:(p.y-view.y)/scale}};view.annotations.push(annotation);selection={view:view.id,annotation:annotation.id};picks=[];render();prompt();
   });
   sheet.addEventListener('pointermove',event=>{
@@ -114,26 +115,27 @@ export function createDrawingSheet({getModel,getName,onLayout=()=>{}}){
   $('drawingZoom').addEventListener('change',fitPaper);
   $('drawingUnit').addEventListener('change',()=>{unit=$('drawingUnit').value;render();});
   $('drawingScale').addEventListener('change',()=>{
-    const value=Number($('drawingScale').value);if(items.some(v=>(v.data.maxX-v.data.minX)*value>260||(v.data.maxY-v.data.minY)*value>155)){hint('Essa escala ultrapassa a área útil da folha. Escolha uma escala menor.');$('drawingScale').value=String(scale);return;}
+    const value=Number($('drawingScale').value);if(items.some(v=>(v.data.maxX-v.data.minX)*value>260||(v.data.maxY-v.data.minY)*value>155)){hint(t("Essa escala ultrapassa a área útil da folha. Escolha uma escala menor."));$('drawingScale').value=String(scale);return;}
     save();scale=value;picks=[];for(const view of items){const d=view.data;view.x=Math.max(12-d.minX*scale,Math.min(285-d.maxX*scale,view.x));view.y=Math.max(12-d.minY*scale,Math.min(177-d.maxY*scale,view.y));}render();prompt();
   });
   $('addDrawingView').addEventListener('click',async()=>{
-    const model=getModel();if(!model||job)return;const kind=$('drawingView').value,existing=items.find(v=>v.kind===kind);if(existing){selection={view:existing.id};render();hint('Essa vista já está na folha. Você pode arrastá-la para reposicionar.');return;}
-    const controller=new AbortController();job=controller;$('addDrawingView').disabled=true;hint('Preparando a projeção e verificando arestas visíveis…');
+    const model=getModel();if(!model||job)return;const kind=$('drawingView').value,existing=items.find(v=>v.kind===kind);if(existing){selection={view:existing.id};render();hint(t("Essa vista já está na folha. Você pode arrastá-la para reposicionar."));return;}
+    const controller=new AbortController();job=controller;$('addDrawingView').disabled=true;hint(t("Preparando a projeção e verificando arestas visíveis…"));
     try{
       if(!source){source=await prepareDrawingGeometry(model,controller.signal);const auto=45/source.size,values=[...$('drawingScale').options].map(o=>Number(o.value)).sort((a,b)=>b-a);scale=values.find(v=>v<=auto)||auto;if(!values.includes(scale))$('drawingScale').add(new Option(`1:${num(1/scale)}`,String(scale)));$('drawingScale').value=String(scale);}
       if(!cache.has(kind))cache.set(kind,await projectDrawingView(source,kind,controller.signal));controller.signal.throwIfAborted();save();
       const index=items.length;const view={id:nextId++,kind,data:cache.get(kind),x:55+(index%3)*92,y:39+Math.floor(index/3)*55,annotations:[]};items.push(view);selection={view:view.id};setTool('move');
-    }catch(error){if(error.name!=='AbortError')hint(`Não foi possível projetar: ${error.message}`);}
+    }catch(error){if(error.name!=='AbortError')hint(t("Não foi possível projetar: {0}",[t(error.message)]));}
     finally{if(job===controller){job=null;$('addDrawingView').disabled=false;}}
   });
-  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));$('toggleDrawing').textContent=value?'← Voltar ao 3D':'← Gerar folha 2D';if(value){render();fitPaper();}onLayout();}
+  function open(value){panel.hidden=!value;document.body.classList.toggle('drawing-open',value);$('toggleDrawing').setAttribute('aria-expanded',String(value));bindText($('toggleDrawing'),()=>value?t("← Voltar ao 3D"):t("← Gerar folha 2D"));if(value){render();fitPaper();}onLayout();}
   $('toggleDrawing').addEventListener('click',()=>open(panel.hidden));$('closeDrawing').addEventListener('click',()=>{open(false);$('toggleDrawing').focus();});
   const filename=()=>`${(getName()||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_')}_folha_A4`;
-  $('downloadDrawing').textContent='Baixar PDF';$('printDrawing').textContent='Baixar DWG';
-  async function exportSheet(format){if(!items.length){hint('Insira pelo menos uma vista antes de baixar.');return;}const pdf=$('downloadDrawing'),dwg=$('printDrawing');pdf.disabled=true;dwg.disabled=true;hint(`Preparando ${format.toUpperCase()}…`);
-    try{const geometry=primitives();if(format==='pdf')await exportDrawingPdf(geometry,filename());else await exportDrawingDwg(geometry,filename());hint(`${format.toUpperCase()} gerado. No DWG, as cotas são linhas e textos editáveis, sem vínculo paramétrico.`);}catch(error){hint(`Falha ao gerar ${format.toUpperCase()}: ${error.message}`);}finally{pdf.disabled=false;dwg.disabled=false;}}
+  bindText($('downloadDrawing'),()=>t("Baixar PDF"));bindText($('printDrawing'),()=>t("Baixar DWG"));
+  async function exportSheet(format){if(!items.length){hint(t("Insira pelo menos uma vista antes de baixar."));return;}const pdf=$('downloadDrawing'),dwg=$('printDrawing');pdf.disabled=true;dwg.disabled=true;hint(t("Preparando {0}…",[format.toUpperCase()]));
+    try{const geometry=primitives();if(format==='pdf')await exportDrawingPdf(geometry,filename());else await exportDrawingDwg(geometry,filename());hint(t("{0} gerado. No DWG, as cotas são linhas e textos editáveis, sem vínculo paramétrico.",[format.toUpperCase()]));}catch(error){hint(t("Falha ao gerar {0}: {1}",[format.toUpperCase(),t(error.message)]));}finally{pdf.disabled=false;dwg.disabled=false;}}
   $('downloadDrawing').addEventListener('click',()=>exportSheet('pdf'));$('printDrawing').addEventListener('click',()=>exportSheet('dwg'));
+  document.addEventListener('languagechange',()=>{render();fitPaper();});
   render();
-  return{setAvailable:value=>{$('toggleDrawing').disabled=!value;},reset:()=>{job?.abort();job=null;$('addDrawingView').disabled=false;source?.dispose();source=null;cache.clear();items=[];history=[];selection=null;picks=[];drag=null;render();hint('A folha foi reiniciada para o modelo ou a escala de origem atual. Insira as vistas.');}};
+  return{setAvailable:value=>{$('toggleDrawing').disabled=!value;},reset:()=>{job?.abort();job=null;$('addDrawingView').disabled=false;source?.dispose();source=null;cache.clear();items=[];history=[];selection=null;picks=[];drag=null;render();hint(t("A folha foi reiniciada para o modelo ou a escala de origem atual. Insira as vistas."));}};
 }

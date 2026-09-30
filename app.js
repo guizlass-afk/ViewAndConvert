@@ -1,5 +1,6 @@
-import {createDrawingSheet} from './drawing-sheet.js?v=4';
-import {convertModel,cadOutputFormats} from './model-export.js?v=1';
+import {t,getLanguage,bindText,initLanguage} from './i18n.js?v=1';
+import {createDrawingSheet} from './drawing-sheet.js?v=5';
+import {convertModel,cadOutputFormats} from './model-export.js?v=2';
 import {PLYLoader} from 'three/addons/loaders/PLYLoader.js';
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -8,6 +9,7 @@ import {OBJLoader} from 'three/addons/loaders/OBJLoader.js';
 import {ThreeMFLoader} from 'three/addons/loaders/3MFLoader.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 
+initLanguage();
 const $=id=>document.getElementById(id);
 const ui={
   fileInput:$('fileInput'),centerFileInput:$('centerFileInput'),dropZone:$('dropZone'),openAnother:$('openAnother'),emptyState:$('emptyState'),viewport:$('viewport'),canvas:$('canvas'),
@@ -23,7 +25,7 @@ const cadFormats=new Set(['step','stp','iges','igs','brep']);
 const professionalFormats=new Set(['x_t','x_b','3dxml']);
 const supportedFormats=new Set([...meshFormats,...cadFormats,...professionalFormats]);
 const unitFactors={mm:1,cm:10,in:25.4,m:1000};
-const unitLabels={mm:'mm',cm:'cm',in:'pol',m:'m'};
+const unitLabels={mm:'mm',cm:'cm',get in(){return t('pol');},m:'m'};
 const state={file:null,extension:'',model:null,meshes:[],edges:[],measureMode:false,pendingPoint:null,measurements:[],measureIndex:0,sectionAxis:'x',sectionPlane:new THREE.Plane(new THREE.Vector3(1,0,0),0),displayMode:'shaded',bounds:new THREE.Box3(),metrics:null,loadingTimer:null,toastTimer:null,allVisible:true};
 
 const scene=new THREE.Scene();
@@ -42,8 +44,8 @@ controls.enableDamping=true;controls.dampingFactor=.08;controls.screenSpacePanni
 scene.add(new THREE.HemisphereLight(0xffffff,0x81939c,2.1));
 const keyLight=new THREE.DirectionalLight(0xffffff,3.1);keyLight.position.set(3,-4,6);scene.add(keyLight);
 const fillLight=new THREE.DirectionalLight(0xbad7e7,1.35);fillLight.position.set(-4,2,1);scene.add(fillLight);
-const modelRoot=new THREE.Group();modelRoot.name='Modelo';scene.add(modelRoot);
-const measurementRoot=new THREE.Group();measurementRoot.name='Medições';scene.add(measurementRoot);
+const modelRoot=new THREE.Group();modelRoot.name=t("Modelo");scene.add(modelRoot);
+const measurementRoot=new THREE.Group();measurementRoot.name=t("Medições");scene.add(measurementRoot);
 const grid=new THREE.GridHelper(1000,20,0xb6c7cb,0xd5e0e2);grid.rotation.x=Math.PI/2;grid.position.z=-.5;grid.material.opacity=.5;grid.material.transparent=true;scene.add(grid);
 // Project the model axes with the camera rotation, but anchor them in the corner.
 const orientationAxes=$('orientationAxes');
@@ -76,15 +78,15 @@ new ResizeObserver(resize).observe(ui.viewport);resize();
 renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);updateOrientationAxes();});
 
 function extensionOf(name){const lower=name.toLowerCase();if(lower.endsWith('.x_t'))return'x_t';if(lower.endsWith('.x_b'))return'x_b';return lower.includes('.')?lower.split('.').pop():'';}
-function formatBytes(bytes){if(bytes<1024)return`${bytes} B`;if(bytes<1048576)return`${(bytes/1024).toFixed(1)} KB`;return`${(bytes/1048576).toFixed(1)} MB`;}
-function locale(value,digits=2){return new Intl.NumberFormat('pt-BR',{maximumFractionDigits:digits,minimumFractionDigits:digits}).format(value);}
+function formatBytes(bytes){if(bytes<1024)return`${bytes} B`;if(bytes<1048576)return`${locale(bytes/1024,1)} KB`;return`${locale(bytes/1048576,1)} MB`;}
+function locale(value,digits=2){return new Intl.NumberFormat(getLanguage(),{maximumFractionDigits:digits,minimumFractionDigits:digits}).format(value);}
 function convertedValue(mm){return mm/(unitFactors[ui.displayUnit.value]||1);}
 function formatLength(mm,digits=2){return`${locale(convertedValue(mm),digits)} ${unitLabels[ui.displayUnit.value]}`;}
-function setProgress(value,title,detail){const safe=Math.max(0,Math.min(100,value));ui.progressBar.style.width=`${safe}%`;ui.progressValue.textContent=`${Math.round(safe)}%`;if(title)ui.loadingTitle.textContent=title;if(detail)ui.loadingDetail.textContent=detail;}
-function showLoading(title='Lendo o modelo…'){ui.loading.hidden=false;setProgress(4,title,'Preparando a geometria para visualização');clearInterval(state.loadingTimer);let value=4;state.loadingTimer=setInterval(()=>{value=Math.min(72,value+Math.max(1,(75-value)*.08));setProgress(value);},180);}
+function setProgress(value,title,detail){const safe=Math.max(0,Math.min(100,value));ui.progressBar.style.width=`${safe}%`;bindText(ui.progressValue,()=>`${Math.round(safe)}%`);if(title)bindText(ui.loadingTitle,()=>t(title));if(detail)bindText(ui.loadingDetail,()=>t(detail));}
+function showLoading(title=t("Lendo o modelo…")){ui.loading.hidden=false;setProgress(4,title,t("Preparando a geometria para visualização"));clearInterval(state.loadingTimer);let value=4;state.loadingTimer=setInterval(()=>{value=Math.min(72,value+Math.max(1,(75-value)*.08));setProgress(value);},180);}
 function hideLoading(){clearInterval(state.loadingTimer);setProgress(100,'Modelo pronto','Geometria preparada com sucesso');setTimeout(()=>{ui.loading.hidden=true;},300);}
-function toast(message,type='info'){clearTimeout(state.toastTimer);ui.toast.textContent=message;ui.toast.className=`toast ${type==='error'?'error':''}`;ui.toast.hidden=false;state.toastTimer=setTimeout(()=>ui.toast.hidden=true,4500);}
-function showProfessional(extension){ui.modalText.textContent=`Arquivos .${extension.toUpperCase()} exigem um tradutor comercial licenciado para preservar superfícies, sólidos, montagem e metadados com fidelidade.`;ui.professionalModal.hidden=false;}
+function toast(message,type='info'){clearTimeout(state.toastTimer);bindText(ui.toast,()=>t(message));ui.toast.className=`toast ${type==='error'?'error':''}`;ui.toast.hidden=false;state.toastTimer=setTimeout(()=>ui.toast.hidden=true,4500);}
+function showProfessional(extension){bindText(ui.modalText,()=>t("Arquivos .{0} exigem um tradutor comercial licenciado para preservar superfícies, sólidos, montagem e metadados com fidelidade.",[extension.toUpperCase()]));ui.professionalModal.hidden=false;}
 
 function disposeObject(object){object.traverse(child=>{child.geometry?.dispose();const materials=Array.isArray(child.material)?child.material:[child.material];materials.filter(Boolean).forEach(material=>{material.map?.dispose();material.dispose?.();});});}
 function clearModel(){drawing.reset();drawing.setAvailable(false);cancelExport();orientationAxes.setAttribute('hidden','');if(state.model){modelRoot.remove(state.model);disposeObject(state.model);}clearMeasurements();state.model=null;state.meshes=[];state.edges=[];state.metrics=null;state.pendingPoint=null;state.measureMode=false;ui.measureButton.classList.remove('active');ui.measureHint.hidden=true;ui.modelTree.innerHTML='';}
@@ -99,7 +101,7 @@ function cadResultToObject(result){
     geometry.userData.cadFaces=item.brep_faces?.map(face=>({first:face.first,last:face.last}))||[];
     const color=item.color?new THREE.Color(item.color[0],item.color[1],item.color[2]):new THREE.Color(0x85aeb7);
     const material=createMaterial(color);
-    if(item.brep_faces?.length){const materials=[material];let triangle=0,faceIndex=0,total=(item.index?.array?.length||item.attributes.position.array.length)/3;while(triangle<total){const face=item.brep_faces[faceIndex];if(!face||triangle<face.first){const last=face?face.first:total;geometry.addGroup(triangle*3,(last-triangle)*3,0);triangle=last;}else{const faceMaterial=createMaterial(face.color?new THREE.Color(...face.color):color);materials.push(faceMaterial);const last=face.last+1;geometry.addGroup(triangle*3,(last-triangle)*3,materials.length-1);triangle=last;faceIndex++;}}const mesh=new THREE.Mesh(geometry,materials);mesh.name=item.name||`Corpo ${group.children.length+1}`;group.add(mesh);}else{const mesh=new THREE.Mesh(geometry,material);mesh.name=item.name||`Corpo ${group.children.length+1}`;group.add(mesh);}
+    if(item.brep_faces?.length){const materials=[material];let triangle=0,faceIndex=0,total=(item.index?.array?.length||item.attributes.position.array.length)/3;while(triangle<total){const face=item.brep_faces[faceIndex];if(!face||triangle<face.first){const last=face?face.first:total;geometry.addGroup(triangle*3,(last-triangle)*3,0);triangle=last;}else{const faceMaterial=createMaterial(face.color?new THREE.Color(...face.color):color);materials.push(faceMaterial);const last=face.last+1;geometry.addGroup(triangle*3,(last-triangle)*3,materials.length-1);triangle=last;faceIndex++;}}const mesh=new THREE.Mesh(geometry,materials);mesh.name=item.name||t("Corpo {0}",[group.children.length+1]);group.add(mesh);}else{const mesh=new THREE.Mesh(geometry,material);mesh.name=item.name||t("Corpo {0}",[group.children.length+1]);group.add(mesh);}
   }
   return group;
 }
@@ -124,21 +126,21 @@ async function parseMeshFile(file,extension,buffer){
   if(extension==='obj'){const text=new TextDecoder().decode(buffer);return new OBJLoader().parse(text);}
   if(extension==='3mf')return new ThreeMFLoader().parse(buffer);
   if(['glb','gltf'].includes(extension)){return new Promise((resolve,reject)=>new GLTFLoader().parse(buffer,'',gltf=>resolve(gltf.scene),reject));}
-  throw new Error('Formato de malha não reconhecido.');
+  throw new Error(t("Formato de malha não reconhecido."));
 }
 
-function parseCadFile(buffer,extension){return new Promise((resolve,reject)=>{const worker=new Worker('cad-worker.js');worker.onmessage=event=>{const data=event.data;if(data.type==='progress')setProgress(data.value,'Convertendo o modelo CAD',data.detail);if(data.type==='result'){worker.terminate();resolve(cadResultToObject(data.result));}if(data.type==='error'){worker.terminate();reject(new Error(data.message));}};worker.onerror=event=>{worker.terminate();reject(new Error(event.message||'Falha ao iniciar o núcleo CAD.'));};worker.postMessage({buffer,extension},[buffer]);});}
+function parseCadFile(buffer,extension){return new Promise((resolve,reject)=>{const worker=new Worker('cad-worker.js');worker.onmessage=event=>{const data=event.data;if(data.type==='progress')setProgress(data.value,t("Convertendo o modelo CAD"),data.detail);if(data.type==='result'){worker.terminate();resolve(cadResultToObject(data.result));}if(data.type==='error'){worker.terminate();reject(new Error(data.message));}};worker.onerror=event=>{worker.terminate();reject(new Error(event.message||t("Falha ao iniciar o núcleo CAD.")));};worker.postMessage({buffer,extension},[buffer]);});}
 
 async function loadFile(file){
   const extension=extensionOf(file.name);
-  if(!supportedFormats.has(extension)){toast(`O formato .${extension||'?'} ainda não é compatível.`,'error');return;}
+  if(!supportedFormats.has(extension)){toast(t("O formato .{0} ainda não é compatível.",[extension||'?']),'error');return;}
   if(professionalFormats.has(extension)){showProfessional(extension);return;}
-  clearModel();state.file=file;state.extension=extension;ui.modelUnit.value=['glb','gltf'].includes(extension)?'1000':'1';showLoading(cadFormats.has(extension)?'Preparando o núcleo CAD…':'Lendo o modelo…');
+  clearModel();state.file=file;state.extension=extension;ui.modelUnit.value=['glb','gltf'].includes(extension)?'1000':'1';showLoading(cadFormats.has(extension)?t("Preparando o núcleo CAD…"):t("Lendo o modelo…"));
   try{
     const buffer=await file.arrayBuffer();setProgress(15,null,'Arquivo carregado; interpretando a geometria');
     const object=cadFormats.has(extension)?await parseCadFile(buffer,extension):await parseMeshFile(file,extension,buffer);
     state.model=normalizeObject(object);state.model.name=file.name;modelRoot.add(state.model);applyModelScale();finishLoad();
-  }catch(error){clearModel();ui.loading.hidden=true;toast(`Não foi possível abrir o arquivo: ${error.message}`,'error');console.error(error);}
+  }catch(error){clearModel();ui.loading.hidden=true;toast(t("Não foi possível abrir o arquivo: {0}",[t(error.message)]),'error');console.error(error);}
 }
 
 function applyModelScale(){if(!state.model)return;drawing.reset();clearMeasurements();const factor=Number(ui.modelUnit.value)||1;state.model.scale.setScalar(factor);state.model.updateMatrixWorld(true);refreshAnalysis();fitCamera();}
@@ -147,7 +149,7 @@ function finishLoad(){
   orientationAxes.removeAttribute('hidden');
   ui.emptyState.hidden=true;ui.openAnother.hidden=false;[ui.modelPanel,ui.measurePanel,ui.sectionPanel,ui.convertPanel].forEach(panel=>panel.hidden=false);
   document.querySelectorAll('.viewer-toolbar button').forEach(button=>button.disabled=false);ui.toggleAll.disabled=false;
-  ui.fileName.textContent=state.file.name;ui.fileFormat.textContent=state.extension.toUpperCase();ui.fileSize.textContent=formatBytes(state.file.size);ui.badgeName.textContent=state.file.name;ui.modelBadge.hidden=false;ui.statusText.textContent=`${state.file.name} carregado`;
+  bindText(ui.fileName,()=>state.file.name);bindText(ui.fileFormat,()=>state.extension.toUpperCase());bindText(ui.fileSize,()=>formatBytes(state.file.size));bindText(ui.badgeName,()=>state.file.name);ui.modelBadge.hidden=false;bindText(ui.statusText,()=>t("{0} carregado",[state.file.name]));
   updateConversionNote();buildTree();applyDisplayMode('shaded');updateSectionPlane();hideLoading();toast('Modelo carregado. Use as ferramentas para inspecionar e medir.');
 }
 
@@ -160,10 +162,10 @@ function calculateMetrics(){
   return{triangles:Math.round(triangles),vertices,area,volume:Math.abs(volume)};
 }
 function refreshAnalysis(){
-  if(!state.model)return;state.bounds.setFromObject(state.model);const size=state.bounds.getSize(new THREE.Vector3());state.metrics=calculateMetrics();
-  ui.meshCount.textContent=state.meshes.length.toLocaleString('pt-BR');ui.triangleCount.textContent=state.metrics.triangles.toLocaleString('pt-BR');ui.vertexCount.textContent=state.metrics.vertices.toLocaleString('pt-BR');ui.renderInfo.textContent=`${state.meshes.length} objeto(s) · ${state.metrics.triangles.toLocaleString('pt-BR')} triângulos`;
-  ui.dimensions.textContent=`${formatLength(size.x)} × ${formatLength(size.y)} × ${formatLength(size.z)}`;ui.dimensionsUnit.textContent=`comprimento × largura × altura em ${unitLabels[ui.displayUnit.value]}`;ui.bounds.textContent=ui.dimensions.textContent;
-  const factor=unitFactors[ui.displayUnit.value]||1;ui.surfaceArea.textContent=`${locale(state.metrics.area/(factor*factor),2)} ${unitLabels[ui.displayUnit.value]}²`;ui.volume.textContent=`${locale(state.metrics.volume/(factor*factor*factor),2)} ${unitLabels[ui.displayUnit.value]}³`;
+  if(!state.model)return;state.bounds.setFromObject(state.model);const size=state.bounds.getSize(new THREE.Vector3());state.metrics=calculateMetrics();const metrics=state.metrics,meshCount=state.meshes.length;
+  bindText(ui.meshCount,()=>meshCount.toLocaleString(getLanguage()));bindText(ui.triangleCount,()=>metrics.triangles.toLocaleString(getLanguage()));bindText(ui.vertexCount,()=>metrics.vertices.toLocaleString(getLanguage()));bindText(ui.renderInfo,()=>t("{0} objeto(s) · {1} triângulos",[meshCount.toLocaleString(getLanguage()),metrics.triangles.toLocaleString(getLanguage())]));
+  bindText(ui.dimensions,()=>`${formatLength(size.x)} × ${formatLength(size.y)} × ${formatLength(size.z)}`);bindText(ui.dimensionsUnit,()=>t("comprimento × largura × altura em {0}",[unitLabels[ui.displayUnit.value]]));bindText(ui.bounds,()=>ui.dimensions.textContent);
+  const factor=unitFactors[ui.displayUnit.value]||1;bindText(ui.surfaceArea,()=>`${locale(metrics.area/(factor*factor),2)} ${unitLabels[ui.displayUnit.value]}²`);bindText(ui.volume,()=>`${locale(metrics.volume/(factor*factor*factor),2)} ${unitLabels[ui.displayUnit.value]}³`);
   const maxSize=Math.max(size.x,size.y,size.z,1);grid.scale.setScalar(Math.max(.1,maxSize/800));grid.position.z=state.bounds.min.z-Math.max(maxSize*.003,.01);
   updateSectionPlane();renderMeasurementList();
 }
@@ -175,7 +177,7 @@ function fitCamera(direction='iso'){
 }
 
 function buildTree(){
-  ui.modelTree.innerHTML='';state.meshes.forEach((mesh,index)=>{const row=document.createElement('label');row.className='tree-node';const check=document.createElement('input');check.type='checkbox';check.checked=true;check.addEventListener('change',()=>{mesh.visible=check.checked;});const icon=document.createElement('span');icon.textContent=`◇ ${mesh.name||`Corpo ${index+1}`}`;icon.title=mesh.name||`Corpo ${index+1}`;const count=document.createElement('b');count.textContent=geometryTriangles(mesh.geometry).toLocaleString('pt-BR');row.append(check,icon,count);ui.modelTree.append(row);});
+  ui.modelTree.innerHTML='';state.meshes.forEach((mesh,index)=>{const row=document.createElement('label');row.className='tree-node';const check=document.createElement('input');check.type='checkbox';check.checked=true;check.addEventListener('change',()=>{mesh.visible=check.checked;});const icon=document.createElement('span');bindText(icon,()=>`◇ ${mesh.name||t("Corpo {0}",[index+1])}`);icon.title=mesh.name||t("Corpo {0}",[index+1]);const count=document.createElement('b');bindText(count,()=>geometryTriangles(mesh.geometry).toLocaleString(getLanguage()));row.append(check,icon,count);ui.modelTree.append(row);});
 }
 function applyDisplayMode(mode){state.displayMode=mode;state.meshes.forEach(mesh=>{const materials=Array.isArray(mesh.material)?mesh.material:[mesh.material];materials.forEach((material,index)=>{const original=mesh.userData.originalMaterials[index]||mesh.userData.originalMaterials[0];material.wireframe=mode==='wireframe';material.transparent=mode==='transparent'||original.transparent;material.opacity=mode==='transparent' ? .28 : original.opacity;material.depthWrite=mode!=='transparent';material.needsUpdate=true;});if(mesh.userData.edgeHelper)mesh.userData.edgeHelper.visible=mode==='edges';});document.querySelectorAll('[data-mode]').forEach(button=>button.classList.toggle('active',button.dataset.mode===mode));}
 
@@ -183,7 +185,7 @@ function updateSectionPlane(){
   const enabled=ui.sectionEnabled.checked&&state.model;ui.sectionSlider.disabled=!enabled;ui.sectionReverse.disabled=!enabled;
   if(!state.model){state.sectionPlane.constant=1e12;return;}
   const axis=state.sectionAxis,index={x:0,y:1,z:2}[axis],normal=new THREE.Vector3(axis==='x'?1:0,axis==='y'?1:0,axis==='z'?1:0);if(ui.sectionReverse.checked)normal.multiplyScalar(-1);
-  const min=state.bounds.min.getComponent(index),max=state.bounds.max.getComponent(index),position=min+(max-min)*(Number(ui.sectionSlider.value)/100);state.sectionPlane.normal.copy(normal);state.sectionPlane.constant=enabled?-normal.getComponent(index)*position:1e12;ui.sectionValue.textContent=`${ui.sectionSlider.value}%`;
+  const min=state.bounds.min.getComponent(index),max=state.bounds.max.getComponent(index),position=min+(max-min)*(Number(ui.sectionSlider.value)/100);state.sectionPlane.normal.copy(normal);state.sectionPlane.constant=enabled?-normal.getComponent(index)*position:1e12;bindText(ui.sectionValue,()=>`${ui.sectionSlider.value}%`);
 }
 
 function pointerIntersection(event){
@@ -235,19 +237,19 @@ ui.canvas.addEventListener('pointerup',event=>{
   const start=pointerStart;pointerStart=null;
   if(event.button!==0||!state.measureMode||!state.model||!start||Math.hypot(event.clientX-start.x,event.clientY-start.y)>4)return;
   const point=measurePoint(event);
-  if(!point){toast(ui.measureTarget.value==='vertex'?'Aproxime o cursor de um vértice visível até aparecer o destaque.':'Clique diretamente sobre uma face do modelo.','error');return;}
+  if(!point){toast(ui.measureTarget.value==='vertex'?t("Aproxime o cursor de um vértice visível até aparecer o destaque."):t("Clique diretamente sobre uma face do modelo."),'error');return;}
   selectMeasurePoint(point);
 });
-let cursorFrame=0;ui.canvas.addEventListener('pointermove',event=>{if(!state.model||cursorFrame)return;cursorFrame=requestAnimationFrame(()=>{cursorFrame=0;if(!state.model)return;const point=state.measureMode?measurePoint(event):pointerIntersection(event)?.point;previewVertex(point);if(point)ui.cursorPosition.textContent=`X ${formatLength(point.x)} · Y ${formatLength(point.y)} · Z ${formatLength(point.z)}`;});});
+let cursorFrame=0;ui.canvas.addEventListener('pointermove',event=>{if(!state.model||cursorFrame)return;cursorFrame=requestAnimationFrame(()=>{cursorFrame=0;if(!state.model)return;const point=state.measureMode?measurePoint(event):pointerIntersection(event)?.point;previewVertex(point);if(point)bindText(ui.cursorPosition,()=>`X ${formatLength(point.x)} · Y ${formatLength(point.y)} · Z ${formatLength(point.z)}`);});});
 function selectMeasurePoint(point){
-  if(!state.pendingPoint){state.pendingPoint=point.clone();const first=marker(point);first.userData.pending=true;measurementRoot.add(first);ui.measureHint.textContent='Agora selecione o segundo ponto';return;}
-  const start=state.pendingPoint.clone(),end=point.clone(),distance=start.distanceTo(end),group=new THREE.Group(),lineGeometry=new THREE.BufferGeometry().setFromPoints([start,end]),line=new THREE.Line(lineGeometry,new THREE.LineBasicMaterial({color:0xff6b2c,depthTest:false}));line.renderOrder=19;group.add(marker(start),marker(end),line);measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});measurementRoot.add(group);state.measurements.push({id:++state.measureIndex,start,end,distance,group});state.pendingPoint=null;ui.measureHint.textContent='Selecione o primeiro ponto';renderMeasurementList();
+  if(!state.pendingPoint){state.pendingPoint=point.clone();const first=marker(point);first.userData.pending=true;measurementRoot.add(first);bindText(ui.measureHint,()=>t("Agora selecione o segundo ponto"));return;}
+  const start=state.pendingPoint.clone(),end=point.clone(),distance=start.distanceTo(end),group=new THREE.Group(),lineGeometry=new THREE.BufferGeometry().setFromPoints([start,end]),line=new THREE.Line(lineGeometry,new THREE.LineBasicMaterial({color:0xff6b2c,depthTest:false}));line.renderOrder=19;group.add(marker(start),marker(end),line);measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});measurementRoot.add(group);state.measurements.push({id:++state.measureIndex,start,end,distance,group});state.pendingPoint=null;bindText(ui.measureHint,()=>t("Selecione o primeiro ponto"));renderMeasurementList();
 }
 function renderMeasurementList(){
-  ui.measurements.innerHTML='';if(!state.measurements.length){ui.measurements.innerHTML='<p>Nenhuma medição criada.</p>';ui.clearMeasurements.disabled=true;return;}ui.clearMeasurements.disabled=false;state.measurements.forEach(item=>{const row=document.createElement('div');row.className='measurement-item';row.innerHTML=`<span>${item.id}</span><div><small>Distância linear</small><strong>${formatLength(item.distance,3)}</strong><dl class="measurement-components">${['x','y','z'].map(axis=>`<div><dt>${axis.toUpperCase()}</dt><dd>${formatLength(Math.abs(item.end[axis]-item.start[axis]),3)}</dd></div>`).join('')}</dl></div><button type="button" aria-label="Remover medição">×</button>`;row.querySelector('button').addEventListener('click',()=>removeMeasurement(item.id));ui.measurements.append(row);});
+  ui.measurements.innerHTML='';if(!state.measurements.length){ui.measurements.innerHTML=`<p>${t('Nenhuma medição criada.')}</p>`;ui.clearMeasurements.disabled=true;return;}ui.clearMeasurements.disabled=false;state.measurements.forEach(item=>{const row=document.createElement('div');row.className='measurement-item';row.innerHTML=`<span>${item.id}</span><div><small>${t('Distância linear')}</small><strong>${formatLength(item.distance,3)}</strong><dl class="measurement-components">${['x','y','z'].map(axis=>`<div><dt>${axis.toUpperCase()}</dt><dd>${formatLength(Math.abs(item.end[axis]-item.start[axis]),3)}</dd></div>`).join('')}</dl></div><button type="button" aria-label="${t('Remover medição')}">×</button>`;row.querySelector('button').addEventListener('click',()=>removeMeasurement(item.id));ui.measurements.append(row);});
 }
 function removeMeasurement(id){const index=state.measurements.findIndex(item=>item.id===id);if(index<0)return;const [item]=state.measurements.splice(index,1);measurementRoot.remove(item.group);disposeObject(item.group);renderMeasurementList();}
-function clearMeasurements(){hideVertexPreview();measurementRoot.children.forEach(disposeObject);measurementRoot.clear();state.measurements=[];state.pendingPoint=null;ui.measureHint.textContent='Selecione o primeiro ponto';renderMeasurementList();}
+function clearMeasurements(){hideVertexPreview();measurementRoot.children.forEach(disposeObject);measurementRoot.clear();state.measurements=[];state.pendingPoint=null;bindText(ui.measureHint,()=>t("Selecione o primeiro ponto"));renderMeasurementList();}
 
 function safeName(){return(state.file?.name||'modelo').replace(/\.[^.]+$/,'').replace(/[^a-z0-9_-]+/gi,'_');}
 function download(data,name,type){const blob=data instanceof Blob?data:new Blob([data],{type}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -255,24 +257,24 @@ let exportJob=null;
 function cancelExport(){exportJob?.abort();}
 function updateConversionNote(){
   const isCadOutput=cadOutputFormats.has(ui.exportFormat.value),isCadInput=cadFormats.has(state.extension);
-  const detail=isCadOutput?(isCadInput?'Conversão da geometria CAD original, sem passar pela malha. Cores, nomes e estrutura da montagem podem não ser preservados.':'Saída CAD facetada: cada triângulo vira uma face. Não recupera curvas, superfícies suaves ou histórico, nem garante um sólido fechado. Malhas grandes podem gerar arquivos pesados.'):'Exportação da malha visualizada. Curvas CAD são aproximadas por triângulos.';
-  $('conversionNote').textContent=`${detail} Inclui todos os corpos, mesmo ocultos, sem aplicar o corte de visualização.`;
+  const detail=isCadOutput?(isCadInput?t("Conversão da geometria CAD original, sem passar pela malha. Cores, nomes e estrutura da montagem podem não ser preservados."):t("Saída CAD facetada: cada triângulo vira uma face. Não recupera curvas, superfícies suaves ou histórico, nem garante um sólido fechado. Malhas grandes podem gerar arquivos pesados.")):t("Exportação da malha visualizada. Curvas CAD são aproximadas por triângulos.");
+  bindText($('conversionNote'),()=>`${t(detail)} ${t('Inclui todos os corpos, mesmo ocultos, sem aplicar o corte de visualização.')}`);
 }
 async function exportModel(){
   if(!state.model||exportJob)return;
   const job=new AbortController();exportJob=job;
   const format=ui.exportFormat.value,name=`${safeName()}.${format}`;
   ui.exportButton.disabled=true;ui.exportFormat.disabled=true;ui.modelUnit.disabled=true;
-  ui.exportButton.querySelector('span').textContent='Convertendo…';$('cancelExport').hidden=false;$('exportStatus').textContent='Preparando conversão…';
+  bindText(ui.exportButton.querySelector('span'),()=>t("Convertendo…"));$('cancelExport').hidden=false;bindText($('exportStatus'),()=>t("Preparando conversão…"));
   try{
-    const blob=await convertModel({model:state.model,file:state.file,extension:state.extension,scale:Number(ui.modelUnit.value)||1,format,signal:job.signal,onProgress:message=>{$('exportStatus').textContent=message;}});
-    job.signal.throwIfAborted();download(blob,name,blob.type);$('exportStatus').textContent=`Pronto: ${name}`;toast(`Conversão concluída: ${name}`);
+    const blob=await convertModel({model:state.model,file:state.file,extension:state.extension,scale:Number(ui.modelUnit.value)||1,format,signal:job.signal,onProgress:message=>{bindText($('exportStatus'),()=>t(message));}});
+    job.signal.throwIfAborted();download(blob,name,blob.type);bindText($('exportStatus'),()=>t("Pronto: {0}",[name]));toast(t("Conversão concluída: {0}",[name]));
   }catch(error){
-    if(error.name==='AbortError')$('exportStatus').textContent='Conversão cancelada.';
-    else{$('exportStatus').textContent=`Falha: ${error.message}`;toast(`Falha na conversão: ${error.message}`,'error');console.error(error);}
+    if(error.name==='AbortError')bindText($('exportStatus'),()=>t("Conversão cancelada."));
+    else{bindText($('exportStatus'),()=>t("Falha: {0}",[t(error.message)]));toast(t("Falha na conversão: {0}",[t(error.message)]),'error');console.error(error);}
   }finally{
     exportJob=null;ui.exportButton.disabled=false;ui.exportFormat.disabled=false;ui.modelUnit.disabled=false;
-    ui.exportButton.querySelector('span').textContent='Converter e baixar';$('cancelExport').hidden=true;
+    bindText(ui.exportButton.querySelector('span'),()=>t("Converter e baixar"));$('cancelExport').hidden=true;
   }
 }
 ui.exportFormat.addEventListener('change',updateConversionNote);
@@ -285,13 +287,13 @@ ui.openAnother.addEventListener('click',()=>ui.fileInput.click());
 ['dragleave','drop'].forEach(type=>ui.viewport.addEventListener(type,event=>{event.preventDefault();ui.viewport.classList.remove('dragging');if(type==='drop')handleFiles(event.dataTransfer.files);}));
 ['dragenter','dragover'].forEach(type=>ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.add('dragging');}));
 ['dragleave','drop'].forEach(type=>ui.dropZone.addEventListener(type,event=>{event.preventDefault();ui.dropZone.classList.remove('dragging');if(type==='drop')handleFiles(event.dataTransfer.files);}));
-$('toggleGrid').addEventListener('click',()=>{grid.visible=!grid.visible;const button=$('toggleGrid');button.classList.toggle('active',grid.visible);button.setAttribute('aria-pressed',String(grid.visible));button.title=grid.visible?'Ocultar grade':'Mostrar grade';});
+$('toggleGrid').addEventListener('click',()=>{grid.visible=!grid.visible;const button=$('toggleGrid');button.classList.toggle('active',grid.visible);button.setAttribute('aria-pressed',String(grid.visible));button.title=grid.visible?t("Ocultar grade"):t('Exibir grade');});
 ui.fitView.addEventListener('click',()=>fitCamera());ui.resetView.addEventListener('click',()=>fitCamera('iso'));
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>fitCamera(button.dataset.view)));
 document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>applyDisplayMode(button.dataset.mode)));
 ui.modelUnit.addEventListener('change',applyModelScale);ui.displayUnit.addEventListener('change',refreshAnalysis);
-ui.measureTarget.addEventListener('change',()=>{hideVertexPreview();state.pendingPoint=null;measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});ui.measureHint.textContent='Selecione o primeiro ponto';});
-ui.measureButton.addEventListener('click',()=>{hideVertexPreview();state.measureMode=!state.measureMode;ui.measureButton.classList.toggle('active',state.measureMode);ui.measureHint.hidden=!state.measureMode;ui.measureHint.textContent=state.pendingPoint?'Agora selecione o segundo ponto':'Selecione o primeiro ponto';ui.canvas.style.cursor=state.measureMode?'crosshair':'grab';});
+ui.measureTarget.addEventListener('change',()=>{hideVertexPreview();state.pendingPoint=null;measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});bindText(ui.measureHint,()=>t("Selecione o primeiro ponto"));});
+ui.measureButton.addEventListener('click',()=>{hideVertexPreview();state.measureMode=!state.measureMode;ui.measureButton.classList.toggle('active',state.measureMode);ui.measureHint.hidden=!state.measureMode;bindText(ui.measureHint,()=>state.pendingPoint?t("Agora selecione o segundo ponto"):t("Selecione o primeiro ponto"));ui.canvas.style.cursor=state.measureMode?'crosshair':'grab';});
 ui.clearMeasurements.addEventListener('click',clearMeasurements);
 ui.sectionEnabled.addEventListener('change',updateSectionPlane);ui.sectionSlider.addEventListener('input',updateSectionPlane);ui.sectionReverse.addEventListener('change',updateSectionPlane);
 document.querySelectorAll('[data-axis]').forEach(button=>button.addEventListener('click',()=>{state.sectionAxis=button.dataset.axis;document.querySelectorAll('[data-axis]').forEach(item=>item.classList.toggle('active',item===button));updateSectionPlane();}));
@@ -308,3 +310,7 @@ const drawing=createDrawingSheet({getModel:()=>state.model,getName:()=>state.fil
 })});
 ui.canvas.style.cursor='grab';updateSectionPlane();
 window.ViewConvertCore=Object.freeze({supportedFormats:[...supportedFormats],extensionOf,formatLength,calculateMetrics,loadFile});
+
+document.addEventListener('languagechange',()=>{renderMeasurementList();updateConversionNote();const gridButton=$('toggleGrid');gridButton.title=t(grid.visible?'Ocultar grade':'Exibir grade');});
+
+for(const [kind,label]of Object.entries({front:'FRONTAL',top:'SUPERIOR',right:'DIREITA'}))bindText(document.querySelector(`[data-view=${kind}]`),()=>t(label).slice(0,1));

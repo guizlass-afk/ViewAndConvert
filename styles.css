@@ -24,3 +24,22 @@
 @media(max-width:760px){body.drawing-open{overflow:hidden}.drawing-open .app-shell{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);height:calc(100dvh - 60px)}.drawing-panel{min-height:0;grid-template-columns:minmax(0,1fr) 178px}.drawing-paper-wrap{min-height:0;padding:8px}.drawing-panel button{font-size:9px}.drawing-heading{padding:8px}}
 
 @media print{@page{size:A4 landscape;margin:0}html,body{width:297mm;height:210mm;margin:0!important;overflow:hidden!important;background:white!important}.topbar,.left-sidebar,.right-sidebar,.viewer-area,.drawing-sidebar,.drawing-heading,.drawing-controls,.drawing-tools,.drawing-options,.drawing-hint,.drawing-footer,.modal{display:none!important}.app-shell,.drawing-panel{display:block!important;width:297mm!important;height:210mm!important;border:0!important;overflow:hidden!important}.drawing-paper-wrap{padding:0!important;margin:0!important;overflow:hidden!important}.drawing-paper-wrap>svg{width:297mm!important;height:210mm!important;box-shadow:none!important;margin:0!important}.drawing-selection,.drawing-preview{display:none!important}}
+
+/* Language controls match the other engineering tools. Keep CAD coordinates LTR. */
+.language-picker{position:relative;flex-shrink:0;z-index:80;font-size:12px}
+.language-trigger{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;background:white;padding:8px 10px;color:var(--ink);cursor:pointer}
+.language-picker img{width:23px;height:16px;object-fit:cover;border-radius:2px}
+.language-trigger i{width:6px;height:6px;border-right:1px solid;border-bottom:1px solid;transform:rotate(45deg);margin-inline-start:4px}
+.language-menu{position:absolute;inset-inline-end:0;top:calc(100% + 7px);width:185px;max-height:70dvh;overflow:auto;padding:5px;background:white;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 25px #12303d26}
+.language-menu[hidden]{display:none}.language-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:0;border-radius:5px;background:white;text-align:start;cursor:pointer;color:var(--ink)}
+.language-menu button:hover,.language-menu button:focus-visible,.language-menu [aria-selected=true]{background:#e5f5f4;color:#008e91}
+.language-native-select{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drawing-paper-wrap,.viewer-area,.dimensions strong,.property-list dd,.measurement-components{direction:ltr}
+[dir=rtl] .app-shell{direction:ltr}[dir=rtl] .sidebar,[dir=rtl] .drawing-sidebar{direction:rtl;text-align:right}
+[dir=rtl] .drawing-paper-wrap svg{direction:ltr}[dir=rtl] .section-heading,[dir=rtl] .panel-title{direction:rtl}
+.topbar{gap:16px}.topbar-copy{min-width:0}.drawing-toggle{max-width:210px;white-space:normal}.privacy{white-space:normal;max-width:180px}
+@media(max-width:1100px){.topbar-copy{display:none}.topbar .privacy{margin-inline-start:auto}.topbar{padding-inline:14px;gap:10px}}
+@media(max-width:760px){.topbar .privacy{display:none}.language-trigger{padding:6px}.language-trigger span{display:none}.topbar .brand{margin-inline-end:auto}.drawing-toggle{font-size:10px;max-width:130px}}
+@media print{.language-picker{display:none!important}}
+
+.brand{direction:ltr}
