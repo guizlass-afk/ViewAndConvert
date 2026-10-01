@@ -87,6 +87,12 @@ try:
         for point in points:
             page.mouse.click(point['x'],point['y'])
         assert row.count() == 0, 'Clipped vertex must not be selectable'
+        page.locator('#displayUnit').select_option('cm')
+        page.reload()
+        page.wait_for_function('!!window.ViewConvertCore')
+        assert page.locator('#displayUnit').input_value() == 'cm', 'Display unit preference was not persisted across reload'
+        assert page.locator('#modelUnit').input_value() == '1', 'Model (import) unit must stay session-only, not persisted'
+        page.evaluate("localStorage.setItem('viewconvert-unit','mm')")
         page.goto(f'http://127.0.0.1:{server.server_port}/tests/browser-tests.html')
         page.wait_for_function("['PASS','FAIL'].includes(document.getElementById('status').textContent)", timeout=60000)
         assert page.locator('#status').inner_text() == 'PASS', page.locator('#details').inner_text()

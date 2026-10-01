@@ -19,6 +19,8 @@ const ui={
   exportFormat:$('exportFormat'),exportButton:$('exportButton'),fitView:$('fitView'),resetView:$('resetView'),statusText:$('statusText'),cursorPosition:$('cursorPosition'),renderInfo:$('renderInfo'),modelBadge:$('modelBadge'),badgeName:$('badgeName'),modelTree:$('modelTree'),toggleAll:$('toggleAll'),
   surfaceArea:$('surfaceArea'),volume:$('volume'),vertexCount:$('vertexCount'),bounds:$('bounds'),professionalModal:$('professionalModal'),modalText:$('modalText'),closeModal:$('closeModal'),modalOk:$('modalOk')
 };
+const DISPLAY_UNIT_KEY='viewconvert-unit';
+try{const savedUnit=localStorage.getItem(DISPLAY_UNIT_KEY);if(['mm','cm','in','m'].includes(savedUnit))ui.displayUnit.value=savedUnit;}catch{}
 
 const meshFormats=new Set(['stl','obj','3mf','glb','gltf','ply']);
 const cadFormats=new Set(['step','stp','iges','igs','brep']);
@@ -300,7 +302,7 @@ $('toggleGrid').addEventListener('click',()=>{grid.visible=!grid.visible;const b
 ui.fitView.addEventListener('click',()=>fitCamera());ui.resetView.addEventListener('click',()=>fitCamera('iso'));
 document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>fitCamera(button.dataset.view)));
 document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>applyDisplayMode(button.dataset.mode)));
-ui.modelUnit.addEventListener('change',applyModelScale);ui.displayUnit.addEventListener('change',refreshAnalysis);
+ui.modelUnit.addEventListener('change',applyModelScale);ui.displayUnit.addEventListener('change',()=>{try{localStorage.setItem(DISPLAY_UNIT_KEY,ui.displayUnit.value);}catch{}refreshAnalysis();});
 ui.measureTarget.addEventListener('change',()=>{hideVertexPreview();state.pendingPoint=null;measurementRoot.children.filter(child=>child.userData.pending).forEach(child=>{measurementRoot.remove(child);disposeObject(child);});bindText(ui.measureHint,()=>t("Selecione o primeiro ponto"));});
 ui.measureButton.addEventListener('click',()=>{hideVertexPreview();state.measureMode=!state.measureMode;ui.measureButton.classList.toggle('active',state.measureMode);ui.measureHint.hidden=!state.measureMode;bindText(ui.measureHint,()=>state.pendingPoint?t("Agora selecione o segundo ponto"):t("Selecione o primeiro ponto"));ui.canvas.style.cursor=state.measureMode?'crosshair':'grab';});
 ui.clearMeasurements.addEventListener('click',clearMeasurements);
